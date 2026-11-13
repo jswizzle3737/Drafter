@@ -182,7 +182,12 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
               multiple
               accept=".txt,.md,.docx,.pdf,.html,.htm,.eml,.json,.csv"
               aria-label="Upload Precedent Documents"
-              onChange={(e) => handleFileUpload(e.target.files)}
+              onChange={(e) => {
+                const files = e.target.files;
+                void handleFileUpload(files).finally(() => {
+                  e.target.value = '';
+                });
+              }}
             />
           </div>
 

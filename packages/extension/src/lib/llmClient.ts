@@ -1,4 +1,5 @@
 import {
+  buildSandboxDraft,
   isLoopbackHostname,
   normalizeBaseUrl,
   PROVIDER_CATALOG,
@@ -17,9 +18,13 @@ export interface GenerateDraftParams {
   model: string;
   compiled: CompiledDraftPrompt;
   subject: string;
+  recipient?: string;
   instruction: string;
   intent: string;
   authorName: string;
+  preferredGreeting?: string;
+  preferredSignOff?: string;
+  signatureBlock?: string;
   previousDraft?: string;
   refinementInstruction?: string;
   apiKeys: ApiKeysConfig;
@@ -39,6 +44,24 @@ export interface GenerateDraftResult {
   updatedUser?: ManagedUser;
 }
 
+export interface CompanionHealthStatus {
+  ok: boolean;
+  mode: 'live' | 'sandbox';
+  upstreamConfigured: boolean;
+}
+
+async function safeReadJson<T = Record<string, any>>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text) return {} as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(
+      `Unexpected server response (${res.status}): ${text.slice(0, 140)}`
+    );
+  }
+}
+
 export function validateCompanionUrl(url: string): string {
   const trimmed = url.trim();
   if (!trimmed) {
@@ -51,6 +74,18 @@ export function validateCompanionUrl(url: string): string {
     );
   }
   return normalizeBaseUrl(trimmed);
+}
+
+export async function companionHealthCheck(
+  companionUrl: string
+): Promise<CompanionHealthStatus> {
+  const base = validateCompanionUrl(companionUrl);
+  const res = await fetch(`${base}/health`);
+  const data = await safeReadJson<CompanionHealthStatus & { error?: string }>(
+    res
+  );
+  if (!res.ok) throw new Error(data.error || 'Health check failed');
+  return data;
 }
 
 export async function companionAuthRegister(params: {
@@ -69,7 +104,7 @@ export async function companionAuthRegister(params: {
       password: params.password,
     }),
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ token: string; user: ManagedUser; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Registration failed');
   return data;
 }
@@ -85,7 +120,7 @@ export async function companionAuthLogin(params: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: params.email, password: params.password }),
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ token: string; user: ManagedUser; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Sign in failed');
   return data;
 }
@@ -98,9 +133,9 @@ export async function companionFetchMe(params: {
   const res = await fetch(`${base}/api/auth/me`, {
     headers: { Authorization: `Bearer ${params.token}` },
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ user: ManagedUser; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Failed to refresh account');
-  return data.user as ManagedUser;
+  return data.user;
 }
 
 export async function companionCreateCheckout(params: {
@@ -117,9 +152,14 @@ export async function companionCreateCheckout(params: {
     },
     body: JSON.stringify({ tier: params.tier }),
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ sessionId: string; checkoutUrl: string; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Checkout session creation failed');
-  return data;
+  return {
+    sessionId: data.sessionId,
+    checkoutUrl: data.sessionId
+      ? `${base}/checkout-sandbox?session_id=${encodeURIComponent(data.sessionId)}`
+      : data.checkoutUrl,
+  };
 }
 
 export async function companionCancelPlan(params: {
@@ -131,9 +171,9 @@ export async function companionCancelPlan(params: {
     method: 'POST',
     headers: { Authorization: `Bearer ${params.token}` },
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ user: ManagedUser; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Cancel plan failed');
-  return data.user as ManagedUser;
+  return data.user;
 }
 
 export async function companionSyncVault(params: {
@@ -150,7 +190,7 @@ export async function companionSyncVault(params: {
     },
     body: JSON.stringify(params.vault),
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ ok: boolean; updatedAt: string; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Vault upload failed');
   return data;
 }
@@ -163,9 +203,9 @@ export async function companionRestoreVault(params: {
   const res = await fetch(`${base}/api/vault`, {
     headers: { Authorization: `Bearer ${params.token}` },
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ vault?: VaultPayload | null; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Vault restore failed');
-  return (data.vault ?? null) as VaultPayload | null;
+  return data.vault ?? null;
 }
 
 export async function companionDistillVoice(params: {
@@ -182,7 +222,7 @@ export async function companionDistillVoice(params: {
     },
     body: JSON.stringify({ samples: params.samples }),
   });
-  const data = await res.json();
+  const data = await safeReadJson<{ summary?: string; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Voice distillation failed');
   return String(data.summary ?? '');
 }
@@ -203,6 +243,43 @@ export async function generateDraft(
   const { provider, model, compiled, apiKeys } = params;
   const providerLabel = getProviderLabel(provider);
 
+  if (provider === 'sandbox') {
+    const content = buildSandboxDraft({
+      subject: params.subject,
+      recipient: params.recipient,
+      instruction: params.instruction,
+      intent: params.intent,
+      model,
+      refinement: params.refinementInstruction,
+      previousDraft: params.previousDraft,
+      authorName: params.authorName,
+      preferredGreeting: params.preferredGreeting,
+      preferredSignOff: params.preferredSignOff,
+      signatureBlock: params.signatureBlock,
+      appliedPrecedentTitles: compiled.appliedPrecedents.map(
+        (p) => p.document.title
+      ),
+      appliedPrecedentGuidance: compiled.appliedPrecedents.map(
+        (p) => p.document.guidance
+      ),
+      footerNote: 'Demo Sandbox (No API Key)',
+    });
+    const split = splitSubjectAndBody(content, params.subject);
+    return {
+      rawText: content,
+      subject: split.subject,
+      body: split.body,
+      provider,
+      providerLabel: 'Demo Sandbox',
+      model,
+      latencyMs: Math.max(12, Math.round(performance.now() - start)),
+      totalTokens: Math.max(
+        340,
+        Math.round((compiled.fullText.length + content.length) / 3.8)
+      ),
+    };
+  }
+
   if (provider === 'managed') {
     if (!params.companionToken) {
       throw new Error(
@@ -221,6 +298,7 @@ export async function generateDraft(
         systemPrompt: compiled.systemPrompt,
         userPrompt: compiled.userPrompt,
         subject: params.subject,
+        recipient: params.recipient,
         instruction: params.instruction,
         intent: params.intent,
         authorName: params.authorName,
@@ -231,7 +309,7 @@ export async function generateDraft(
         ),
       }),
     });
-    const data = await res.json();
+    const data = await safeReadJson(res);
     if (!res.ok) throw new Error(data.error || 'Managed draft request failed');
     const split = splitSubjectAndBody(data.content, params.subject);
     return {
@@ -266,7 +344,7 @@ export async function generateDraft(
         temperature: 0.4,
       }),
     });
-    const data = await res.json();
+    const data = await safeReadJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'OpenRouter request failed');
     }
@@ -306,7 +384,7 @@ export async function generateDraft(
         temperature: 0.4,
       }),
     });
-    const data = await res.json();
+    const data = await safeReadJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'OpenAI request failed');
     }
@@ -330,7 +408,7 @@ export async function generateDraft(
     if (!apiKeys.anthropic.trim()) {
       throw new Error('Add your Anthropic API key under Models & Plans.');
     }
-    const directModel = stripProviderPrefix(model).replace('.', '-');
+    const directModel = stripProviderPrefix(model).replace(/\./g, '-');
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -346,7 +424,7 @@ export async function generateDraft(
         messages: [{ role: 'user', content: compiled.userPrompt }],
       }),
     });
-    const data = await res.json();
+    const data = await safeReadJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Anthropic request failed');
     }
@@ -382,7 +460,7 @@ export async function generateDraft(
         contents: [{ role: 'user', parts: [{ text: compiled.userPrompt }] }],
       }),
     });
-    const data = await res.json();
+    const data = await safeReadJson(res);
     if (!res.ok) {
       throw new Error(data.error?.message || 'Gemini request failed');
     }
@@ -426,7 +504,7 @@ export async function generateDraft(
       ],
     }),
   });
-  const data = await res.json();
+  const data = await safeReadJson(res);
   if (!res.ok) throw new Error(data.error || 'Ollama request failed');
   const content = data.message?.content ?? '';
   const split = splitSubjectAndBody(content, params.subject);

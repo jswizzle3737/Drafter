@@ -177,6 +177,21 @@ test('Companion server full lifecycle: auth, sandbox checkout, Stripe webhook HM
     assert.equal(getVault.status, 200);
     const vaultJson = await getVault.json();
     assert.equal(vaultJson.vault.precedents.length, DEFAULT_PRECEDENTS.length);
+
+    // 7. Forwarded headers respected on checkoutUrl
+    const fwdCheckoutRes = await fetch(`${srv.baseUrl}/api/billing/checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        'X-Forwarded-Proto': 'https',
+        'X-Forwarded-Host': 'preview.drafter.example',
+      },
+      body: JSON.stringify({ tier: 'pro' }),
+    });
+    assert.equal(fwdCheckoutRes.status, 200);
+    const fwdJson = await fwdCheckoutRes.json();
+    assert.ok(fwdJson.checkoutUrl.startsWith('https://preview.drafter.example/checkout-sandbox?'));
   } finally {
     await srv.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });

@@ -9,6 +9,11 @@ function isWebUrl(url?: string): boolean {
 
 chrome.runtime.onInstalled.addListener(() => {
   try {
+    chrome.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: false }).catch(() => {});
+  } catch {
+    // Ignore if sidePanel API is unavailable
+  }
+  try {
     chrome.contextMenus.removeAll(() => {
       chrome.contextMenus.create({
         id: 'drafter-open-studio',

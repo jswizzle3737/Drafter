@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   analyzeWritingSamples,
   compileDraftPrompt,
+  getCompatibleModelForProvider,
   type DraftIntent,
   type DraftSession,
   type DraftVersion,
   type PageContext,
   type PrecedentDocument,
+  type ProviderId,
 } from '@drafter/shared';
 import { companionDistillVoice, generateDraft } from '../lib/llmClient.js';
 import {
@@ -56,6 +58,9 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
   const [activeTab, setActiveTab] = useState<StudioTabId>(
     getInitialTabFromQuery
   );
+  const [modelsSubtabRequest, setModelsSubtabRequest] = useState<
+    { tab: 'byok' | 'account' | 'prefs'; nonce: number } | undefined
+  >(undefined);
   const [intent, setIntent] = useState<DraftIntent>('Email Reply');
   const [instruction, setInstruction] = useState('');
   const [voiceToneOverride, setVoiceToneOverride] =
@@ -169,6 +174,23 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
     notify('Started a fresh draft workspace.');
   };
 
+  const handleProviderChange = (provider: ProviderId) => {
+    persistState((prev) => {
+      const nextModel = getCompatibleModelForProvider(provider, prev.model);
+      const nextCompare = getCompatibleModelForProvider(
+        provider,
+        prev.compareModel,
+        nextModel
+      );
+      return {
+        ...prev,
+        provider,
+        model: nextModel,
+        compareModel: nextCompare,
+      };
+    });
+  };
+
   const saveSessionVersion = (
     nextVersions: DraftVersion[],
     currentSessionId: string
@@ -222,9 +244,13 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
         model: state.model,
         compiled,
         subject: state.capturedContext.subject,
+        recipient: state.capturedContext.recipient,
         instruction,
         intent,
         authorName: state.voiceProfile.displayName,
+        preferredGreeting: state.voiceProfile.preferredGreeting,
+        preferredSignOff: state.voiceProfile.preferredSignOff,
+        signatureBlock: state.voiceProfile.signatureBlock,
         previousDraft: refinement ? currentActive?.rawText : undefined,
         refinementInstruction: refinement,
         apiKeys: state.apiKeys,
@@ -240,9 +266,13 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
             model: state.compareModel,
             compiled,
             subject: state.capturedContext.subject,
+            recipient: state.capturedContext.recipient,
             instruction,
             intent,
             authorName: state.voiceProfile.displayName,
+            preferredGreeting: state.voiceProfile.preferredGreeting,
+            preferredSignOff: state.voiceProfile.preferredSignOff,
+            signatureBlock: state.voiceProfile.signatureBlock,
             apiKeys: state.apiKeys,
             companionUrl: state.companionUrl,
             companionToken: state.companionToken,
@@ -388,6 +418,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
           }))
         }
         user={state.companionUser}
+        provider={state.provider}
         onOpenHistory={() => setHistoryOpen(true)}
         onOpenBackup={() => setBackupOpen(true)}
         onOpenFullStudio={
@@ -430,14 +461,24 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
               setExcludedIds((prev) => prev.filter((x) => x !== id))
             }
             onInspectPrecedent={setInspectedPrecedent}
-            onProviderChange={(provider) =>
-              persistState((prev) => ({ ...prev, provider }))
-            }
+            onProviderChange={handleProviderChange}
             onModelChange={(model) =>
               persistState((prev) => ({ ...prev, model }))
             }
             onCompareModelChange={(compareModel) =>
               persistState((prev) => ({ ...prev, compareModel }))
+            }
+            onOllamaModelChange={(ollamaModel) =>
+              persistState((prev) => ({
+                ...prev,
+                apiKeys: { ...prev.apiKeys, ollamaModel },
+              }))
+            }
+            onOllamaUrlChange={(ollamaUrl) =>
+              persistState((prev) => ({
+                ...prev,
+                apiKeys: { ...prev.apiKeys, ollamaUrl },
+              }))
             }
             onAbCompareChange={setAbCompare}
             onGenerate={() => runDraftGeneration()}
@@ -445,6 +486,13 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
             onSelectVersion={setActiveVersionIndex}
             onInsertIntoTab={handleInsertIntoTab}
             onNavigateTab={setActiveTab}
+            onOpenModelsSubtab={(sub) => {
+              setModelsSubtabRequest((prev) => ({
+                tab: sub,
+                nonce: (prev?.nonce ?? 0) + 1,
+              }));
+              setActiveTab('models');
+            }}
             onNotify={notify}
           />
         )}
@@ -478,6 +526,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
           <ModelsPlansTab
             state={state}
             initialSubtab={getInitialSubtabFromQuery()}
+            requestedSubtab={modelsSubtabRequest}
             onUpdateState={persistState}
             onNotify={notify}
           />

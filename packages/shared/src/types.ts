@@ -1,6 +1,7 @@
 export type ThemeMode = 'light' | 'dark';
 
 export type ProviderId =
+  | 'sandbox'
   | 'managed'
   | 'openrouter'
   | 'openai'
