@@ -3,6 +3,7 @@ import type {
   ExtensionPreferences,
   ModelOption,
   PrecedentDocument,
+  ProviderId,
   ProviderMeta,
   SubscriptionPlan,
   VoiceProfile,
@@ -35,6 +36,14 @@ export const TONE_PRESETS: string[] = [
 ];
 
 export const PROVIDER_CATALOG: ProviderMeta[] = [
+  {
+    id: 'sandbox',
+    label: 'Demo Sandbox (Offline · No API Key)',
+    shortLabel: 'Demo Sandbox',
+    requiresKey: false,
+    description:
+      'Runs instant precedent- and voice-grounded draft previews offline inside the extension without needing an API key.',
+  },
   {
     id: 'managed',
     label: 'Drafter Managed Subscription',
@@ -85,53 +94,84 @@ export const MODEL_CATALOG: ModelOption[] = [
     id: 'anthropic/claude-sonnet-4.5',
     label: 'Claude Sonnet 4.5 · Best Writing',
     shortLabel: 'Claude Sonnet 4.5',
-    providerHints: ['managed', 'openrouter', 'anthropic'],
+    providerHints: ['sandbox', 'managed', 'openrouter', 'anthropic'],
   },
   {
     id: 'anthropic/claude-opus-4.1',
     label: 'Claude Opus 4.1 · Flagship Reasoning',
     shortLabel: 'Claude Opus 4.1',
-    providerHints: ['managed', 'openrouter', 'anthropic'],
+    providerHints: ['sandbox', 'managed', 'openrouter', 'anthropic'],
     reasoningTier: true,
   },
   {
     id: 'openai/gpt-4.1',
     label: 'GPT-4.1 · Crisp Structured',
     shortLabel: 'GPT-4.1',
-    providerHints: ['managed', 'openrouter', 'openai'],
+    providerHints: ['sandbox', 'managed', 'openrouter', 'openai'],
   },
   {
     id: 'openai/gpt-4o',
     label: 'GPT-4o · Fast Balanced',
     shortLabel: 'GPT-4o',
-    providerHints: ['managed', 'openrouter', 'openai'],
+    providerHints: ['sandbox', 'managed', 'openrouter', 'openai'],
   },
   {
     id: 'google/gemini-2.5-pro',
     label: 'Gemini 2.5 Pro · Deep Context',
     shortLabel: 'Gemini 2.5 Pro',
-    providerHints: ['managed', 'openrouter', 'gemini'],
+    providerHints: ['sandbox', 'managed', 'openrouter', 'gemini'],
     reasoningTier: true,
   },
   {
     id: 'google/gemini-2.5-flash',
     label: 'Gemini 2.5 Flash · Ultra Fast',
     shortLabel: 'Gemini 2.5 Flash',
-    providerHints: ['managed', 'openrouter', 'gemini'],
+    providerHints: ['sandbox', 'managed', 'openrouter', 'gemini'],
   },
   {
     id: 'deepseek/deepseek-chat-v3',
     label: 'DeepSeek V3 · Cost Efficient',
     shortLabel: 'DeepSeek V3',
-    providerHints: ['managed', 'openrouter'],
+    providerHints: ['sandbox', 'managed', 'openrouter'],
   },
   {
     id: 'x-ai/grok-3',
     label: 'Grok 3 · Direct Tone',
     shortLabel: 'Grok 3',
-    providerHints: ['managed', 'openrouter'],
+    providerHints: ['sandbox', 'managed', 'openrouter'],
   },
 ];
+
+export function getModelsForProvider(provider: ProviderId): ModelOption[] {
+  if (provider === 'ollama') return [];
+  const eligible = MODEL_CATALOG.filter((m) =>
+    m.providerHints.includes(provider)
+  );
+  return eligible.length > 0 ? eligible : MODEL_CATALOG;
+}
+
+export function getCompatibleModelForProvider(
+  provider: ProviderId,
+  currentModel: string,
+  excludeModel?: string
+): string {
+  if (provider === 'ollama') return currentModel;
+  const eligible = getModelsForProvider(provider);
+  if (!excludeModel && eligible.some((m) => m.id === currentModel)) {
+    return currentModel;
+  }
+  if (excludeModel) {
+    const alternate = eligible.find((m) => m.id !== excludeModel);
+    if (
+      currentModel !== excludeModel &&
+      eligible.some((m) => m.id === currentModel)
+    ) {
+      return currentModel;
+    }
+    return alternate?.id ?? eligible[0]?.id ?? MODEL_CATALOG[0].id;
+  }
+  return eligible[0]?.id ?? MODEL_CATALOG[0].id;
+}
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {

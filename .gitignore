@@ -6,3 +6,5 @@ packages/*/dist/
 tmp/
 .tmp/
 release/
+.drafter-server-data.json
+.chrome-dev-profile/

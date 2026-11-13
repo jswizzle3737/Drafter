@@ -31,9 +31,10 @@ function findPrimaryComposeField(): HTMLElement | null {
   }
   const candidates = Array.from(
     document.querySelectorAll<HTMLElement>(
-      'textarea:not([readonly]):not([disabled]), [contenteditable="true"]'
+      'textarea:not([readonly]):not([disabled]), [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"], [role="textbox"]'
     )
   ).filter((el) => {
+    if (!isEditableComposeField(el)) return false;
     const rect = el.getBoundingClientRect();
     return rect.width >= 160 && rect.height >= 60;
   });
@@ -111,7 +112,7 @@ function extractThreadText(): string {
   const lines = (document.body?.innerText ?? '')
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l.length > 0 && l !== '+ Draft');
+    .filter((l) => l.length > 0 && l !== '✦ Draft' && l !== '+ Draft');
   const composeVal =
     compose instanceof HTMLTextAreaElement
       ? compose.value
@@ -211,7 +212,7 @@ function scanAndAttach(): void {
     return;
   }
   const fields = document.querySelectorAll<HTMLElement>(
-    'textarea, [contenteditable="true"]'
+    'textarea, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"], [role="textbox"]'
   );
   fields.forEach((el) => {
     if (!isEditableComposeField(el)) return;
@@ -250,7 +251,18 @@ function insertIntoCompose(subject: string, body: string): {
   } else if (target.isContentEditable) {
     target.focus();
     target.innerText = body;
-    target.dispatchEvent(new Event('input', { bubbles: true }));
+    try {
+      target.dispatchEvent(
+        new InputEvent('input', {
+          bubbles: true,
+          inputType: 'insertText',
+          data: body,
+        })
+      );
+    } catch {
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    target.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   const aria = target.getAttribute('aria-label');
@@ -295,8 +307,15 @@ try {
   scanAndAttach();
 }
 
-window.addEventListener('resize', () => {
-  if (activeTargetEl) positionTrigger(activeTargetEl);
+const repositionActive = () => {
+  if (activeTargetEl && document.contains(activeTargetEl)) {
+    positionTrigger(activeTargetEl);
+  }
+};
+window.addEventListener('resize', repositionActive, { passive: true });
+window.addEventListener('scroll', repositionActive, {
+  passive: true,
+  capture: true,
 });
 
 const observer = new MutationObserver(() => {

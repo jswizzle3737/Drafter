@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ManagedUser, ThemeMode } from '@drafter/shared';
+import type { ManagedUser, ProviderId, ThemeMode } from '@drafter/shared';
 
 export type StudioTabId = 'studio' | 'precedents' | 'voice' | 'models';
 
@@ -10,6 +10,7 @@ interface HeaderProps {
   theme: ThemeMode;
   onToggleTheme: () => void;
   user: ManagedUser | null;
+  provider?: ProviderId;
   onOpenHistory: () => void;
   onOpenBackup: () => void;
   onOpenFullStudio?: () => void;
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   theme,
   onToggleTheme,
   user,
+  provider,
   onOpenHistory,
   onOpenBackup,
   onOpenFullStudio,
@@ -29,7 +31,9 @@ export const Header: React.FC<HeaderProps> = ({
   const planBadge =
     user && user.status === 'active' && user.tier !== 'starter'
       ? `${user.tier.toUpperCase()} · active`
-      : 'BYOK Starter';
+      : provider === 'sandbox'
+        ? 'Demo Sandbox'
+        : 'BYOK Starter';
 
   return (
     <header className="drafter-header">

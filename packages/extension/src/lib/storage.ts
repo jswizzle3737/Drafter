@@ -69,6 +69,14 @@ export function createEmptyContext(): PageContext {
   };
 }
 
+export function isExtensionRuntime(): boolean {
+  return (
+    typeof chrome !== 'undefined' &&
+    Boolean(chrome.runtime?.id) &&
+    Boolean(chrome.runtime?.sendMessage)
+  );
+}
+
 export function createInitialState(): DrafterAppState {
   return {
     theme: 'light',
@@ -99,7 +107,7 @@ export function createInitialState(): DrafterAppState {
 
 function hasChromeStorage(): boolean {
   return (
-    typeof chrome !== 'undefined' &&
+    isExtensionRuntime() &&
     Boolean(chrome.storage?.local?.get) &&
     Boolean(chrome.storage?.local?.set)
   );
@@ -154,6 +162,9 @@ export async function loadAppState(): Promise<DrafterAppState> {
       ...saved,
       apiKeys: { ...defaults.apiKeys, ...(saved.apiKeys ?? {}) },
       preferences: { ...defaults.preferences, ...(saved.preferences ?? {}) },
+      capturedContext: saved.capturedContext
+        ? { ...defaults.capturedContext, ...saved.capturedContext }
+        : defaults.capturedContext,
       voiceProfile: {
         ...defaults.voiceProfile,
         ...(saved.voiceProfile ?? {}),
@@ -198,7 +209,7 @@ export async function setQuickInstruction(instruction: string): Promise<void> {
 }
 
 export async function captureActiveTabContext(): Promise<PageContext | null> {
-  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+  if (isExtensionRuntime()) {
     try {
       const resp = await chrome.runtime.sendMessage({
         type: 'DRAFTER_CAPTURE_ACTIVE_TAB',
@@ -217,7 +228,7 @@ export async function insertDraftIntoActiveTab(
   subject: string,
   body: string
 ): Promise<{ ok: boolean; targetLabel?: string; error?: string }> {
-  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+  if (isExtensionRuntime()) {
     try {
       const resp = await chrome.runtime.sendMessage({
         type: 'DRAFTER_INSERT_INTO_ACTIVE_TAB',

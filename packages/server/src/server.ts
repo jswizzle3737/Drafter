@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import http from 'node:http';
 import {
   analyzeWritingSamples,
+  buildSandboxDraft,
   MODEL_CATALOG,
   splitSubjectAndBody,
   SUBSCRIPTION_PLANS,
@@ -167,90 +168,6 @@ function sendJson(
   res.end(json);
 }
 
-function buildSandboxDraft(params: {
-  subject: string;
-  instruction: string;
-  intent: string;
-  refinement?: string;
-  previousDraft?: string;
-  authorName: string;
-  appliedPrecedentTitles: string[];
-}): string {
-  const cleanSubject = params.subject
-    ? params.subject.startsWith('Re:')
-      ? params.subject
-      : `Re: ${params.subject}`
-    : 'Follow-up on your note';
-  const summaryTask = params.instruction.trim() || 'your inquiry';
-  const author = params.authorName.trim() || 'Alex';
-
-  if (params.refinement && params.previousDraft) {
-    const refLower = params.refinement.toLowerCase();
-    if (refLower.includes('shorter') || refLower.includes('concise')) {
-      return [
-        `Subject: ${cleanSubject}`,
-        '',
-        'Hi there,',
-        '',
-        `Thanks for the note on ${summaryTask} — keeping this concise:`,
-        '',
-        'Per our renewal guidelines, we cannot discount single-year terms by 25%, though we can extend a 10% loyalty credit for a 24-month commitment paid upfront.',
-        '',
-        'Does Thursday at 2:00 PM work for a quick 15-minute alignment call?',
-        '',
-        'Best,',
-        `${author} (Drafter Managed Sandbox)`,
-      ].join('\n');
-    }
-    if (refLower.includes('warmer')) {
-      return [
-        `Subject: ${cleanSubject}`,
-        '',
-        'Hi there,',
-        '',
-        `Really appreciate the partnership and your note regarding ${summaryTask}.`,
-        '',
-        'While our single-year pricing stays at standard rates to reflect platform capabilities and dedicated SLAs, we would love to offer a 10% loyalty credit on a 24-month upfront commitment.',
-        '',
-        'Would Thursday afternoon work for a quick 15-minute call to walk through options?',
-        '',
-        'Warmly,',
-        `${author} (Drafter Managed Sandbox)`,
-      ].join('\n');
-    }
-
-    return [
-      `Subject: ${cleanSubject}`,
-      '',
-      'Hi there,',
-      '',
-      `Refined update (${params.refinement}):`,
-      '',
-      `Regarding ${summaryTask}, we are aligned on the core scope and precedent guardrails${params.appliedPrecedentTitles.length ? ` (${params.appliedPrecedentTitles.join(', ')})` : ''}.`,
-      '',
-      'Let me know if Thursday afternoon works for a brief alignment call.',
-      '',
-      'Best,',
-      `${author} (Drafter Managed Sandbox)`,
-    ].join('\n');
-  }
-
-  return [
-    `Subject: ${cleanSubject}`,
-    '',
-    'Hi there,',
-    '',
-    `Thanks for reaching out regarding ${summaryTask}.`,
-    '',
-    'Aligned with our prior precedent commitments, we can confirm the core scope while keeping our standard terms intact. Let us finalize the dates and concrete deliverables so both teams stay aligned.',
-    '',
-    'Let me know if Thursday afternoon works for a quick 15-minute alignment call.',
-    '',
-    'Best,',
-    `${author} (Drafter Managed Sandbox — configure OPENROUTER_API_KEY on companion server for live frontier models)`,
-  ].join('\n');
-}
-
 export async function createDrafterServer(
   options: DrafterServerOptions = {}
 ): Promise<DrafterServerInstance> {
@@ -383,7 +300,17 @@ export async function createDrafterServer(
         }
 
         const sessionId = `cs_sandbox_${crypto.randomBytes(8).toString('hex')}`;
-        const origin = `http://${req.headers.host ?? `${host}:${boundPort}`}`;
+        const forwardedProto =
+          typeof req.headers['x-forwarded-proto'] === 'string'
+            ? req.headers['x-forwarded-proto'].split(',')[0].trim()
+            : '';
+        const proto = forwardedProto === 'https' ? 'https' : 'http';
+        const forwardedHost =
+          typeof req.headers['x-forwarded-host'] === 'string'
+            ? req.headers['x-forwarded-host'].split(',')[0].trim()
+            : '';
+        const reqHost = forwardedHost || req.headers.host || `${host}:${boundPort}`;
+        const origin = `${proto}://${reqHost}`;
         const checkoutUrl = `${origin}/checkout-sandbox?session_id=${encodeURIComponent(sessionId)}`;
 
         store.saveCheckoutSession({
@@ -597,8 +524,10 @@ export async function createDrafterServer(
         } else {
           rawContent = buildSandboxDraft({
             subject: String(body.subject ?? ''),
+            recipient: body.recipient ? String(body.recipient) : undefined,
             instruction: String(body.instruction ?? ''),
             intent: String(body.intent ?? 'Email Reply'),
+            model,
             refinement: body.refinementInstruction
               ? String(body.refinementInstruction)
               : undefined,
@@ -609,6 +538,8 @@ export async function createDrafterServer(
             appliedPrecedentTitles: Array.isArray(body.appliedPrecedentTitles)
               ? body.appliedPrecedentTitles.map(String)
               : [],
+            footerNote:
+              'Drafter Managed Sandbox — configure OPENROUTER_API_KEY on companion server for live frontier models',
           });
           totalTokens = Math.max(
             480,

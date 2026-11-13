@@ -13,8 +13,17 @@ import './styles/app.css';
 const PopupApp: React.FC = () => {
   const [state, setState] = useState<DrafterAppState>(createInitialState);
   const [instruction, setInstruction] = useState('');
+  const activeTabRef = React.useRef<{ id?: number; windowId?: number }>({});
 
   useEffect(() => {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const active = tabs?.[0];
+        if (active) {
+          activeTabRef.current = { id: active.id, windowId: active.windowId };
+        }
+      });
+    }
     (async () => {
       const initial = await loadAppState();
       setState(initial);
@@ -41,13 +50,25 @@ const PopupApp: React.FC = () => {
     return rankPrecedents(state.precedents, query, { limit: 1 })[0] ?? null;
   }, [state.precedents, state.capturedContext, instruction]);
 
-  const openSidePanel = async () => {
-    await setQuickInstruction(instruction);
+  const openSidePanel = () => {
+    const { id: tabId, windowId } = activeTabRef.current;
+    if (typeof chrome !== 'undefined' && chrome.sidePanel?.open && (tabId || windowId)) {
+      const target = tabId ? { tabId } : { windowId: windowId! };
+      void chrome.sidePanel.open(target).catch(() => {
+        chrome.runtime?.sendMessage?.({ type: 'DRAFTER_OPEN_SIDEPANEL', tabId });
+      });
+      void setQuickInstruction(instruction).finally(() => window.close());
+      return;
+    }
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-      chrome.runtime.sendMessage({ type: 'DRAFTER_OPEN_SIDEPANEL' });
-      window.close();
+      void setQuickInstruction(instruction).finally(() => {
+        chrome.runtime.sendMessage({ type: 'DRAFTER_OPEN_SIDEPANEL', tabId });
+        window.close();
+      });
     } else {
-      window.open('./sidepanel.html', '_blank', 'noopener');
+      void setQuickInstruction(instruction).finally(() => {
+        window.open('./sidepanel.html', '_blank', 'noopener');
+      });
     }
   };
 
