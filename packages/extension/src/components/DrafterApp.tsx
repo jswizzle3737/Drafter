@@ -3,16 +3,20 @@ import {
   analyzeWritingSamples,
   compileDraftPrompt,
   getCompatibleModelForProvider,
+  getDesignTheme,
+  normalizeThemeId,
   type DraftIntent,
   type DraftSession,
   type DraftVersion,
   type PageContext,
   type PrecedentDocument,
   type ProviderId,
+  type ThemeMode,
 } from '@drafter/shared';
 import { companionDistillVoice, generateDraft } from '../lib/llmClient.js';
 import {
   captureActiveTabContext,
+  closeSidePanelWindow,
   createEmptyContext,
   createInitialState,
   insertDraftIntoActiveTab,
@@ -23,7 +27,7 @@ import {
 import { DraftStudioTab } from './DraftStudioTab.js';
 import { Header, type StudioTabId } from './Header.js';
 import { BackupModal, HistoryModal, InspectPrecedentModal } from './Modals.js';
-import { ModelsPlansTab } from './ModelsPlansTab.js';
+import { ModelsPlansTab, type SettingsSubtabId } from './ModelsPlansTab.js';
 import { PrecedentsTab } from './PrecedentsTab.js';
 import { VoiceStyleTab } from './VoiceStyleTab.js';
 
@@ -45,11 +49,11 @@ function getInitialTabFromQuery(): StudioTabId {
   return 'studio';
 }
 
-function getInitialSubtabFromQuery(): 'byok' | 'account' | 'prefs' {
-  if (typeof window === 'undefined') return 'account';
+function getInitialSubtabFromQuery(): SettingsSubtabId {
+  if (typeof window === 'undefined') return 'design';
   const sub = new URLSearchParams(window.location.search).get('sub');
-  if (sub === 'byok' || sub === 'account' || sub === 'prefs') return sub;
-  return 'account';
+  if (sub === 'byok' || sub === 'prefs' || sub === 'design') return sub;
+  return 'design';
 }
 
 export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
@@ -59,10 +63,11 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
     getInitialTabFromQuery
   );
   const [modelsSubtabRequest, setModelsSubtabRequest] = useState<
-    { tab: 'byok' | 'account' | 'prefs'; nonce: number } | undefined
+    { tab: SettingsSubtabId | 'account'; nonce: number } | undefined
   >(undefined);
   const [intent, setIntent] = useState<DraftIntent>('Email Reply');
   const [instruction, setInstruction] = useState('');
+
   const [voiceToneOverride, setVoiceToneOverride] =
     useState('Personal Default');
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
@@ -128,6 +133,16 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
       area: string
     ) => {
       if (area !== 'local') return;
+      if (changes['drafter.appState.v1']?.newValue) {
+        const nextState = changes['drafter.appState.v1']
+          .newValue as Partial<DrafterAppState>;
+        if (nextState.theme) {
+          setState((prev) => ({
+            ...prev,
+            theme: normalizeThemeId(nextState.theme),
+          }));
+        }
+      }
       if (changes['drafter.capturedContext']?.newValue) {
         const ctx = changes['drafter.capturedContext'].newValue as PageContext;
         setState((prev) => ({ ...prev, capturedContext: ctx }));
@@ -138,21 +153,56 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
       }
     };
 
+    const onRuntimeMessage = (msg: { type?: string }) => {
+      if (mode === 'sidepanel' && msg?.type === 'DRAFTER_SIDEPANEL_FORCE_CLOSE') {
+        try {
+          window.close();
+        } catch {
+          // Ignore
+        }
+      }
+    };
+
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.addListener(onRuntimeMessage);
+    }
+
     if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
       chrome.storage.onChanged.addListener(onStorageChange);
       return () => {
         mounted = false;
         chrome.storage.onChanged.removeListener(onStorageChange);
+        chrome.runtime?.onMessage?.removeListener(onRuntimeMessage);
       };
     }
     return () => {
       mounted = false;
+      if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+        chrome.runtime.onMessage.removeListener(onRuntimeMessage);
+      }
     };
-  }, [persistState]);
+  }, [mode, persistState]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', state.theme);
   }, [state.theme]);
+
+  useEffect(() => {
+    if (mode !== 'sidepanel') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === 'Escape' &&
+        !historyOpen &&
+        !backupOpen &&
+        !inspectedPrecedent
+      ) {
+        void closeSidePanelWindow();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mode, historyOpen, backupOpen, inspectedPrecedent]);
+
 
   const handleCaptureTab = async () => {
     const ctx = await captureActiveTabContext();
@@ -404,6 +454,15 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
     );
   }
 
+  const handleSelectTheme = (nextTheme: ThemeMode) => {
+    const meta = getDesignTheme(nextTheme);
+    persistState((prev) => ({
+      ...prev,
+      theme: meta.id,
+    }));
+    notify(`Design switched to ${meta.name}.`);
+  };
+
   return (
     <div className={`drafter-shell mode-${mode}`} data-theme={state.theme}>
       <Header
@@ -411,20 +470,18 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         theme={state.theme}
-        onToggleTheme={() =>
-          persistState((prev) => ({
-            ...prev,
-            theme: prev.theme === 'light' ? 'dark' : 'light',
-          }))
-        }
-        user={state.companionUser}
+        onSelectTheme={handleSelectTheme}
         provider={state.provider}
         onOpenHistory={() => setHistoryOpen(true)}
         onOpenBackup={() => setBackupOpen(true)}
         onOpenFullStudio={
           mode === 'sidepanel' ? handleOpenFullStudio : undefined
         }
+        onCloseSidePanel={
+          mode === 'sidepanel' ? () => void closeSidePanelWindow() : undefined
+        }
       />
+
 
       <main className="drafter-main">
         {activeTab === 'studio' && (

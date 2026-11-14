@@ -192,12 +192,14 @@ async function runE2E() {
       .getByText(/10% loyalty credit/)
       .waitFor({ timeout: 5000 });
 
-    // 3. Check Popup & SidePanel pages load cleanly
+    // 3. Check Popup & SidePanel pages load cleanly and SidePanel Close button closes it
     const popupPage = await context.newPage();
     await popupPage.goto(`chrome-extension://${extId}/popup.html`, {
       waitUntil: 'domcontentloaded',
     });
     await popupPage.getByText('Open Side Panel').waitFor({ timeout: 5000 });
+    await popupPage.getByText('✕ Close Side Panel').waitFor({ timeout: 5000 });
+    await popupPage.getByLabel('Interface Design').selectOption('terminal');
     await popupPage.close();
 
     const sidepanelPage = await context.newPage();
@@ -205,50 +207,31 @@ async function runE2E() {
       waitUntil: 'domcontentloaded',
     });
     await sidepanelPage.getByText('Context & Briefing').waitFor({ timeout: 5000 });
-    await sidepanelPage.close();
-
-    // 4. Models & Plans: Check Server, register, subscribe via Stripe Checkout Simulator, auto/refresh -> PRO active
-    await studioPage.getByRole('button', { name: 'Models & Plans' }).click();
-    await studioPage
-      .getByRole('button', { name: 'Managed Subscriptions & Account' })
-      .click();
-
-    await studioPage
-      .getByLabel('Companion Server URL')
-      .fill(srv.baseUrl);
-    await studioPage.getByRole('button', { name: 'Check Server' }).click();
-    await studioPage
-      .getByText(/Server Online · Sandbox Billing & AI/)
+    await sidepanelPage
+      .getByRole('button', { name: 'Close Side Panel' })
       .waitFor({ timeout: 5000 });
-
-    await studioPage.getByLabel('Full Name').fill('Alex Rivera');
-    await studioPage.getByLabel('Email').fill('alex.e2e@example.com');
-    await studioPage.getByLabel('Password').fill('password123');
-    await studioPage
-      .locator('form button[type="submit"]')
-      .click();
-
-    await studioPage
-      .getByText('alex.e2e@example.com', { exact: true })
-      .waitFor({ timeout: 5000 });
-
-    const [checkoutPage] = await Promise.all([
-      context.waitForEvent('page', { timeout: 10000 }),
-      studioPage
-        .getByRole('button', { name: /Subscribe to Drafter Pro/ })
-        .click(),
+    await Promise.all([
+      sidepanelPage.waitForEvent('close', { timeout: 5000 }),
+      sidepanelPage.getByRole('button', { name: 'Close Side Panel' }).click(),
     ]);
-    await checkoutPage.waitForLoadState('domcontentloaded');
-    await checkoutPage
-      .getByRole('button', { name: 'Complete Subscription Payment' })
-      .click();
-    await checkoutPage
-      .getByText('Subscription active!')
-      .waitFor({ timeout: 5000 });
-    await checkoutPage.close();
 
-    await studioPage.getByRole('button', { name: 'Refresh Status' }).click();
-    await studioPage.getByText('PRO · active').first().waitFor({ timeout: 5000 });
+    // 4. Settings & Themes: verify 15 interface designs, pricing removed, and theme switching
+    await studioPage.getByRole('button', { name: 'Settings & Themes' }).click();
+    await studioPage
+      .getByText('Fifteen complete designs from PromptOptimizer')
+      .waitFor({ timeout: 5000 });
+
+    await studioPage.getByRole('button', { name: /Manuscript/ }).click();
+    await studioPage.waitForFunction(
+      () => document.documentElement.getAttribute('data-theme') === 'manuscript'
+    );
+
+    await studioPage
+      .getByRole('tab', { name: 'AI Engine & API Keys' })
+      .click();
+    await studioPage
+      .getByText('Personal API Keys (Stored Locally)')
+      .waitFor({ timeout: 5000 });
 
     // 5. Check Precedents & Voice tabs
     await studioPage.getByRole('button', { name: 'Precedents' }).click();
@@ -263,7 +246,7 @@ async function runE2E() {
       .first()
       .waitFor({ timeout: 5000 });
 
-    // 6. Draft Studio: generate V1 under Managed Pro, iterate V2, check Diff, toggle Dark theme, Insert into textarea webmail
+    // 6. Draft Studio: generate V1, iterate V2, check Diff, switch design via Header menu, Insert into textarea webmail
     await studioPage.getByRole('button', { name: 'Draft Studio' }).click();
     await studioPage
       .getByRole('button', { name: 'Generate Fresh Draft' })
@@ -280,8 +263,12 @@ async function runE2E() {
     await studioPage.getByRole('button', { name: 'Diff' }).click();
     await studioPage.getByText('Comparing V1 → V2').waitFor({ timeout: 5000 });
 
-    await studioPage.getByRole('button', { name: /Theme:/ }).click();
-    await studioPage.getByRole('button', { name: 'Theme: Dark' }).waitFor({ timeout: 5000 });
+    await studioPage.getByRole('button', { name: /Design:/ }).click();
+    await studioPage.getByRole('option', { name: /Midnight/ }).click();
+    await studioPage.waitForFunction(
+      () => document.documentElement.getAttribute('data-theme') === 'midnight'
+    );
+
 
     await studioPage.getByRole('button', { name: 'Insert into Tab' }).click();
     await studioPage

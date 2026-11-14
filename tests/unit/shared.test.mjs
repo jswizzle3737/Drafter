@@ -11,14 +11,18 @@ import {
   DEFAULT_PRECEDENTS,
   DEFAULT_VOICE_PROFILE,
   DEFAULT_WRITING_SAMPLES,
+  DESIGN_THEMES,
   extractTextFromDocxBytes,
   getCompatibleModelForProvider,
+  getDesignTheme,
   getModelsForProvider,
   isLoopbackHostname,
+  normalizeThemeId,
   rankPrecedents,
   selectVoiceSamples,
   splitSubjectAndBody,
 } from '@drafter/shared';
+
 
 test('chunkPrecedentDocument preserves section headings and respects boundaries', () => {
   const doc = {
@@ -260,3 +264,16 @@ test('getModelsForProvider and getCompatibleModelForProvider select valid provid
   assert.equal(distinctCompare, 'openai/gpt-4o');
   assert.equal(getModelsForProvider('ollama').length, 0);
 });
+
+test('DESIGN_THEMES defines all 15 PromptOptimizer interface designs and normalizes IDs', () => {
+  assert.equal(DESIGN_THEMES.length, 15);
+  const darkCount = DESIGN_THEMES.filter((t) => t.mode === 'dark').length;
+  const lightCount = DESIGN_THEMES.filter((t) => t.mode === 'light').length;
+  assert.equal(darkCount, 8);
+  assert.equal(lightCount, 7);
+  assert.equal(normalizeThemeId('manuscript'), 'manuscript');
+  assert.equal(normalizeThemeId('terminal'), 'terminal');
+  assert.equal(normalizeThemeId('unknown-theme'), 'dark');
+  assert.equal(getDesignTheme('rose').name, 'Rose');
+});
+

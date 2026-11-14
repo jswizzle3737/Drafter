@@ -1,10 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { rankPrecedents } from '@drafter/shared';
+import {
+  DESIGN_THEMES,
+  getDesignTheme,
+  rankPrecedents,
+  type ThemeMode,
+} from '@drafter/shared';
 import {
   captureActiveTabContext,
+  closeSidePanelWindow,
   createInitialState,
   loadAppState,
+  saveAppState,
   setQuickInstruction,
   type DrafterAppState,
 } from './lib/storage.js';
@@ -50,6 +57,14 @@ const PopupApp: React.FC = () => {
     return rankPrecedents(state.precedents, query, { limit: 1 })[0] ?? null;
   }, [state.precedents, state.capturedContext, instruction]);
 
+  const handleThemeChange = async (themeId: ThemeMode) => {
+    const meta = getDesignTheme(themeId);
+    const nextState: DrafterAppState = { ...state, theme: meta.id };
+    setState(nextState);
+    document.documentElement.setAttribute('data-theme', meta.id);
+    await saveAppState(nextState);
+  };
+
   const openSidePanel = () => {
     const { id: tabId, windowId } = activeTabRef.current;
     if (typeof chrome !== 'undefined' && chrome.sidePanel?.open && (tabId || windowId)) {
@@ -70,6 +85,10 @@ const PopupApp: React.FC = () => {
         window.open('./sidepanel.html', '_blank', 'noopener');
       });
     }
+  };
+
+  const closeSidePanel = async () => {
+    await closeSidePanelWindow();
   };
 
   const openFullStudio = async (tab = 'studio') => {
@@ -93,7 +112,22 @@ const PopupApp: React.FC = () => {
           </span>
           <span className="brand-title">Drafter</span>
         </div>
-        <span className="badge badge-accent">{state.model}</span>
+
+        <div className="row" style={{ gap: '6px' }}>
+          <select
+            aria-label="Interface Design"
+            className="select"
+            style={{ width: 'auto', padding: '4px 8px', fontSize: '12px' }}
+            value={state.theme}
+            onChange={(e) => void handleThemeChange(e.target.value as ThemeMode)}
+          >
+            {DESIGN_THEMES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.mode === 'dark' ? 'Dark' : 'Light'})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="subcard stack" style={{ gap: '6px' }}>
@@ -145,9 +179,20 @@ const PopupApp: React.FC = () => {
         <button
           type="button"
           className="btn btn-primary btn-lg"
-          onClick={() => openFullStudio('studio')}
+          onClick={() => void openFullStudio('studio')}
         >
           Full Studio ↗
+        </button>
+      </div>
+
+      <div className="row-between">
+        <button
+          type="button"
+          className="btn btn-sm"
+          style={{ width: '100%' }}
+          onClick={() => void closeSidePanel()}
+        >
+          ✕ Close Side Panel
         </button>
       </div>
 
@@ -158,23 +203,23 @@ const PopupApp: React.FC = () => {
         <button
           type="button"
           className="btn btn-sm"
-          onClick={() => openFullStudio('precedents')}
+          onClick={() => void openFullStudio('precedents')}
         >
           Precedents ({state.precedents.length})
         </button>
         <button
           type="button"
           className="btn btn-sm"
-          onClick={() => openFullStudio('voice')}
+          onClick={() => void openFullStudio('voice')}
         >
           Voice ({activeSamplesCount})
         </button>
         <button
           type="button"
           className="btn btn-sm"
-          onClick={() => openFullStudio('models')}
+          onClick={() => void openFullStudio('models')}
         >
-          Models / Plans
+          Settings &amp; Themes
         </button>
       </div>
     </div>

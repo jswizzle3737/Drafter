@@ -1,4 +1,11 @@
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'dark' | 'terminal' | 'ember' | 'harbor' | 'contrast' | 'amethyst' | 'midnight' | 'aurora' | 'light' | 'manuscript' | 'sand' | 'glacier' | 'meadow' | 'rose' | 'ochre';
+export interface DesignThemeMeta {
+    id: ThemeMode;
+    name: string;
+    desc: string;
+    mode: 'dark' | 'light';
+    swatch: [string, string, string];
+}
 export type ProviderId = 'sandbox' | 'managed' | 'openrouter' | 'openai' | 'anthropic' | 'gemini' | 'ollama';
 export type SubscriptionTierId = 'starter' | 'pro' | 'team';
 export type DraftIntent = 'Email Reply' | 'Cold Outreach' | 'Follow-Up' | 'Negotiate / Pushback' | 'Decline Politely' | 'Status Update' | 'Web Form / Comment';
