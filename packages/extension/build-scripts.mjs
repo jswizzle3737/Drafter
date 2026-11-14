@@ -55,6 +55,32 @@ if (!workerSrc) {
 }
 fs.copyFileSync(workerSrc, path.join(DIST, 'pdf.worker.min.mjs'));
 
+const REPO_ROOT = path.resolve(__dirname, '../..');
+
+// Mirror built extension artifacts to repo root so selecting the root folder in chrome://extensions -> Load unpacked works directly
+for (const file of [
+  'manifest.json',
+  'popup.html',
+  'sidepanel.html',
+  'studio.html',
+  'background.js',
+  'content.js',
+  'pdf.worker.min.mjs',
+]) {
+  fs.copyFileSync(path.join(DIST, file), path.join(REPO_ROOT, file));
+}
+
+for (const dir of ['icons', 'assets']) {
+  const srcDir = path.join(DIST, dir);
+  const dstDir = path.join(REPO_ROOT, dir);
+  fs.rmSync(dstDir, { recursive: true, force: true });
+  fs.mkdirSync(dstDir, { recursive: true });
+  for (const file of fs.readdirSync(srcDir)) {
+    fs.copyFileSync(path.join(srcDir, file), path.join(dstDir, file));
+  }
+}
+
 console.log(
-  '[extension] Built background.js, content.js, and bundled pdf.worker.min.mjs'
+  '[extension] Built background.js, content.js, bundled pdf.worker.min.mjs, and synced root unpacked bundle'
 );
+
