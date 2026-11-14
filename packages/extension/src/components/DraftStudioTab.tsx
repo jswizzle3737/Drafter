@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import {
   compileDraftPrompt,
   computeLineDiff,
+  getModelsForProvider,
   INTENT_PRESETS,
-  MODEL_CATALOG,
+  isLoopbackHostname,
   PROVIDER_CATALOG,
   REFINEMENT_CHIPS,
   TONE_PRESETS,
@@ -40,12 +41,15 @@ interface DraftStudioTabProps {
   onProviderChange: (p: ProviderId) => void;
   onModelChange: (m: string) => void;
   onCompareModelChange: (m: string) => void;
+  onOllamaModelChange: (m: string) => void;
+  onOllamaUrlChange: (url: string) => void;
   onAbCompareChange: (val: boolean) => void;
   onGenerate: () => void;
   onIterate: (refinement: string) => void;
   onSelectVersion: (idx: number) => void;
   onInsertIntoTab: (subject: string, body: string) => void;
   onNavigateTab: (tab: StudioTabId) => void;
+  onOpenModelsSubtab: (sub: 'byok' | 'account') => void;
   onNotify: (msg: string) => void;
 }
 
@@ -73,12 +77,15 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
   onProviderChange,
   onModelChange,
   onCompareModelChange,
+  onOllamaModelChange,
+  onOllamaUrlChange,
   onAbCompareChange,
   onGenerate,
   onIterate,
   onSelectVersion,
   onInsertIntoTab,
   onNavigateTab,
+  onOpenModelsSubtab,
   onNotify,
 }) => {
   const [contextCollapsed, setContextCollapsed] = useState(false);
@@ -91,6 +98,75 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
   const activeVersion = versions[activeVersionIndex] ?? null;
   const previousVersion =
     activeVersionIndex > 0 ? versions[activeVersionIndex - 1] : null;
+  const eligibleModels = getModelsForProvider(state.provider);
+
+  const missingProviderNotice = useMemo((): {
+    tone: 'info' | 'warn';
+    message: string;
+    targetSubtab: 'byok' | 'account';
+    ctaLabel: string;
+  } | null => {
+    if (state.provider === 'sandbox') {
+      return {
+        tone: 'info',
+        message:
+          'Demo Sandbox is active — test precedent- and voice-grounded drafting offline without an API key.',
+        targetSubtab: 'byok',
+        ctaLabel: 'Configure API Key',
+      };
+    }
+    if (state.provider === 'managed') {
+      const hasActivePlan =
+        Boolean(state.companionToken) &&
+        state.companionUser?.status === 'active' &&
+        state.companionUser.tier !== 'starter';
+      if (!hasActivePlan) {
+        return {
+          tone: 'warn',
+          message:
+            'Managed Subscription requires signing in and activating Pro or Team.',
+          targetSubtab: 'account',
+          ctaLabel: 'Open Account & Plans',
+        };
+      }
+      return null;
+    }
+    if (state.provider === 'ollama') {
+      if (!isLoopbackHostname(state.apiKeys.ollamaUrl)) {
+        return {
+          tone: 'warn',
+          message: 'Ollama URL must target localhost or 127.0.0.1.',
+          targetSubtab: 'byok',
+          ctaLabel: 'Fix Endpoint',
+        };
+      }
+      return null;
+    }
+    const keyMap: Record<
+      'openrouter' | 'openai' | 'anthropic' | 'gemini',
+      { value: string; label: string }
+    > = {
+      openrouter: { value: state.apiKeys.openrouter, label: 'OpenRouter' },
+      openai: { value: state.apiKeys.openai, label: 'OpenAI' },
+      anthropic: { value: state.apiKeys.anthropic, label: 'Anthropic' },
+      gemini: { value: state.apiKeys.gemini, label: 'Google Gemini' },
+    };
+    const cfg = keyMap[state.provider];
+    if (cfg && !cfg.value.trim()) {
+      return {
+        tone: 'warn',
+        message: `Add your ${cfg.label} API key under Models & Plans, or switch to Demo Sandbox.`,
+        targetSubtab: 'byok',
+        ctaLabel: 'Add API Key',
+      };
+    }
+    return null;
+  }, [
+    state.provider,
+    state.companionToken,
+    state.companionUser,
+    state.apiKeys,
+  ]);
 
   const compiled = useMemo(
     () =>
@@ -179,24 +255,24 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
             </div>
           </div>
 
-          <div className="subcard stack">
-            <div className="row-between">
-              <span style={{ fontWeight: 700, fontSize: '13px' }}>
-                {state.capturedContext.kind === 'email' ? 'Email: ' : 'Page: '}
-                {state.capturedContext.subject ||
-                  state.capturedContext.title ||
-                  'Manual Context'}
-              </span>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setContextCollapsed((c) => !c)}
-              >
-                {contextCollapsed ? 'Expand' : 'Collapse'}
-              </button>
-            </div>
+            <div className="subcard stack">
+              <div className="row-between">
+                <span style={{ fontWeight: 700, fontSize: '13px' }}>
+                  {state.capturedContext.kind === 'email' ? 'Email: ' : 'Page: '}
+                  {state.capturedContext.subject ||
+                    state.capturedContext.title ||
+                    'Manual Context'}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => setContextCollapsed((c) => !c)}
+                >
+                  {contextCollapsed ? 'Expand' : 'Collapse'}
+                </button>
+              </div>
 
-            {!contextCollapsed && (
+              {!contextCollapsed && (
               <>
                 <div className="grid-2">
                   <input
@@ -277,11 +353,13 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
               onChange={(e) => onVoiceToneOverrideChange(e.target.value)}
             >
               <option value="Personal Default">Voice: Personal Default</option>
-              {TONE_PRESETS.map((t) => (
-                <option key={t} value={t}>
-                  Voice: {t}
-                </option>
-              ))}
+              {TONE_PRESETS.filter((t) => t !== 'Default Personal Voice').map(
+                (t) => (
+                  <option key={t} value={t}>
+                    Voice: {t}
+                  </option>
+                )
+              )}
             </select>
           </div>
 
@@ -437,45 +515,101 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
                 </option>
               ))}
             </select>
-            <select
-              className="select"
-              aria-label="Drafting Model"
-              value={state.model}
-              onChange={(e) => onModelChange(e.target.value)}
-            >
-              {MODEL_CATALOG.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="row-between">
-            <label className="row" style={{ cursor: 'pointer' }}>
+            {state.provider === 'ollama' ? (
               <input
-                type="checkbox"
-                checked={abCompare}
-                onChange={(e) => onAbCompareChange(e.target.checked)}
+                className="input mono"
+                aria-label="Drafting Model"
+                placeholder="llama3.1:8b"
+                value={state.apiKeys.ollamaModel}
+                onChange={(e) => onOllamaModelChange(e.target.value)}
               />
-              <span>A/B Compare</span>
-            </label>
-            {abCompare && (
+            ) : (
               <select
                 className="select"
-                style={{ width: 'auto', minWidth: '220px' }}
-                aria-label="Comparison Model B"
-                value={state.compareModel}
-                onChange={(e) => onCompareModelChange(e.target.value)}
+                aria-label="Drafting Model"
+                value={state.model}
+                onChange={(e) => onModelChange(e.target.value)}
               >
-                {MODEL_CATALOG.map((m) => (
+                {eligibleModels.map((m) => (
                   <option key={m.id} value={m.id}>
-                    Compare: {m.shortLabel}
+                    {m.label}
                   </option>
                 ))}
               </select>
             )}
           </div>
+
+          {state.provider === 'ollama' && (
+            <div className="field">
+              <label className="field-label" htmlFor="studio-ollama-url">
+                Local Ollama Base URL
+              </label>
+              <input
+                id="studio-ollama-url"
+                className="input mono"
+                value={state.apiKeys.ollamaUrl}
+                onChange={(e) => onOllamaUrlChange(e.target.value)}
+              />
+            </div>
+          )}
+
+          {eligibleModels.length > 1 && (
+            <div className="row-between">
+              <label className="row" style={{ cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={abCompare}
+                  onChange={(e) => onAbCompareChange(e.target.checked)}
+                />
+                <span>A/B Compare</span>
+              </label>
+              {abCompare && (
+                <select
+                  className="select"
+                  style={{ width: 'auto', minWidth: '220px' }}
+                  aria-label="Comparison Model B"
+                  value={state.compareModel}
+                  onChange={(e) => onCompareModelChange(e.target.value)}
+                >
+                  {eligibleModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      Compare: {m.shortLabel}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {missingProviderNotice && (
+            <div
+              className={`subcard row-between provider-hint-bar ${missingProviderNotice.tone === 'warn' ? 'warn' : ''}`}
+            >
+              <span className="muted" style={{ flex: 1 }}>
+                {missingProviderNotice.message}
+              </span>
+              <div className="row">
+                {state.provider !== 'sandbox' && (
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => onProviderChange('sandbox')}
+                  >
+                    Use Demo Sandbox
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() =>
+                    onOpenModelsSubtab(missingProviderNotice.targetSubtab)
+                  }
+                >
+                  {missingProviderNotice.ctaLabel}
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
             type="button"

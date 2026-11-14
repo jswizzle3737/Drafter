@@ -23,7 +23,7 @@ function findChromiumExecutable() {
 }
 
 async function startMockWebmailServer() {
-  const html = `<!DOCTYPE html>
+  const textareaHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -47,6 +47,30 @@ async function startMockWebmailServer() {
 </body>
 </html>`;
 
+  const richComposeHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inbox Compose — Rich Text</title>
+  <link rel="icon" href="data:," />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 36px; color: #111827; }
+    .thread { border: 1px solid #cbd5e1; padding: 12px; margin: 12px 0; border-radius: 6px; }
+    input[name="subject"] { width: 320px; padding: 8px; margin-bottom: 10px; display: block; border: 1px solid #94a3b8; }
+    #rich-compose-body { width: 480px; min-height: 180px; padding: 12px; border: 2px solid #0f172a; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Enterprise Contract Addendum Inquiry</h1>
+  <div>counsel@northstar.example</div>
+  <div class="thread" data-thread="true">
+    Can we extend the term and review annual discount options before signing?
+  </div>
+  <input type="text" name="subject" value="Re: Enterprise Contract Addendum Inquiry" aria-label="Subject" />
+  <div id="rich-compose-body" contenteditable="true" role="textbox" aria-label="Rich Message Body"></div>
+</body>
+</html>`;
+
   const server = http.createServer((req, res) => {
     if (req.url === '/favicon.ico') {
       res.writeHead(204);
@@ -54,7 +78,7 @@ async function startMockWebmailServer() {
       return;
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(html);
+    res.end(req.url === '/rich-compose' ? richComposeHtml : textareaHtml);
   });
 
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -66,9 +90,24 @@ async function startMockWebmailServer() {
 }
 
 async function runE2E() {
+  for (const requiredFile of [
+    'manifest.json',
+    'background.js',
+    'content.js',
+    'popup.html',
+    'sidepanel.html',
+    'studio.html',
+    'pdf.worker.min.mjs',
+    'icons/icon-128.png',
+  ]) {
+    assert.ok(
+      fs.existsSync(path.join(EXTENSION_DIST, requiredFile)),
+      `Built extension file missing: ${requiredFile}`
+    );
+  }
   assert.ok(
-    fs.existsSync(path.join(EXTENSION_DIST, 'manifest.json')),
-    'Built extension manifest.json missing.'
+    !fs.existsSync(path.join(EXTENSION_DIST, 'index.html')),
+    'Extension dist should not contain standalone web-app index.html'
   );
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'drafter-e2e-'));
@@ -129,7 +168,7 @@ async function runE2E() {
       timeout: 10000,
     });
 
-    // 2. Open Studio tab and capture context from webmail tab
+    // 2. Open Studio tab, capture webmail context, and test offline Demo Sandbox mode
     const studioPage = await context.newPage();
     await studioPage.goto(`chrome-extension://${extId}/studio.html`, {
       waitUntil: 'domcontentloaded',
@@ -139,6 +178,19 @@ async function runE2E() {
       const el = document.querySelector('input[aria-label="Context Subject"]');
       return el && el.value.includes('Annual SaaS Renewal');
     });
+
+    await studioPage
+      .getByLabel('Drafting Instruction')
+      .fill(
+        'Reply to Acme declining the 25% discount on annual renewal and offer 10% for a 24-month commitment.'
+      );
+    await studioPage.getByLabel('Drafting Provider').selectOption('sandbox');
+    await studioPage.getByRole('button', { name: 'Generate Fresh Draft' }).click();
+    await studioPage.getByRole('button', { name: 'V1' }).waitFor({ timeout: 5000 });
+    await studioPage
+      .locator('.draft-body-box')
+      .getByText(/10% loyalty credit/)
+      .waitFor({ timeout: 5000 });
 
     // 3. Check Popup & SidePanel pages load cleanly
     const popupPage = await context.newPage();
@@ -155,7 +207,7 @@ async function runE2E() {
     await sidepanelPage.getByText('Context & Briefing').waitFor({ timeout: 5000 });
     await sidepanelPage.close();
 
-    // 4. Models & Plans: register, subscribe via Stripe Checkout Simulator, refresh -> PRO active
+    // 4. Models & Plans: Check Server, register, subscribe via Stripe Checkout Simulator, auto/refresh -> PRO active
     await studioPage.getByRole('button', { name: 'Models & Plans' }).click();
     await studioPage
       .getByRole('button', { name: 'Managed Subscriptions & Account' })
@@ -164,6 +216,11 @@ async function runE2E() {
     await studioPage
       .getByLabel('Companion Server URL')
       .fill(srv.baseUrl);
+    await studioPage.getByRole('button', { name: 'Check Server' }).click();
+    await studioPage
+      .getByText(/Server Online · Sandbox Billing & AI/)
+      .waitFor({ timeout: 5000 });
+
     await studioPage.getByLabel('Full Name').fill('Alex Rivera');
     await studioPage.getByLabel('Email').fill('alex.e2e@example.com');
     await studioPage.getByLabel('Password').fill('password123');
@@ -206,13 +263,8 @@ async function runE2E() {
       .first()
       .waitFor({ timeout: 5000 });
 
-    // 6. Draft Studio: generate V1, iterate V2, check Diff, toggle Dark theme, Insert into webmail
+    // 6. Draft Studio: generate V1 under Managed Pro, iterate V2, check Diff, toggle Dark theme, Insert into textarea webmail
     await studioPage.getByRole('button', { name: 'Draft Studio' }).click();
-    await studioPage
-      .getByLabel('Drafting Instruction')
-      .fill(
-        'Reply to Acme declining the 25% discount on annual renewal and offer 10% for a 24-month commitment.'
-      );
     await studioPage
       .getByRole('button', { name: 'Generate Fresh Draft' })
       .click();
@@ -244,6 +296,24 @@ async function runE2E() {
       `Expected inserted draft in webmail compose body, got: ${insertedBody}`
     );
 
+    // 7. Verify [contenteditable="true"] compose field detection, inline trigger, capture, and insertion
+    await webmailPage.goto(`${webmail.baseUrl}/rich-compose`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await webmailPage.waitForSelector('#drafter-inline-trigger-host', {
+      timeout: 10000,
+    });
+    await studioPage.getByRole('button', { name: 'Capture Tab' }).click();
+    await studioPage.waitForFunction(() => {
+      const el = document.querySelector('input[aria-label="Context Subject"]');
+      return el && el.value.includes('Enterprise Contract Addendum Inquiry');
+    });
+    await studioPage.getByRole('button', { name: 'Insert into Tab' }).click();
+    await webmailPage.waitForFunction(() => {
+      const el = document.getElementById('rich-compose-body');
+      return el && el.innerText.includes('10% loyalty credit');
+    });
+
     assert.equal(
       consoleErrors.length,
       0,
@@ -256,7 +326,7 @@ async function runE2E() {
     );
 
     console.log(
-      '✅ E2E Chromium + Companion Server verification passed with 0 console/page errors!'
+      '✅ E2E Chrome Extension (MV3) + Companion Server verification passed with 0 console/page errors!'
     );
   } finally {
     if (context) await context.close();

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  getCompatibleModelForProvider,
+  getModelsForProvider,
   isLoopbackHostname,
-  MODEL_CATALOG,
   PROVIDER_CATALOG,
   SUBSCRIPTION_PLANS,
   type ApiKeysConfig,
@@ -16,14 +17,18 @@ import {
   companionCancelPlan,
   companionCreateCheckout,
   companionFetchMe,
+  companionHealthCheck,
   companionRestoreVault,
   companionSyncVault,
+  validateCompanionUrl,
+  type CompanionHealthStatus,
 } from '../lib/llmClient.js';
-import type { DrafterAppState } from '../lib/storage.js';
+import { isExtensionRuntime, type DrafterAppState } from '../lib/storage.js';
 
 interface ModelsPlansTabProps {
   state: DrafterAppState;
   initialSubtab?: 'byok' | 'account' | 'prefs';
+  requestedSubtab?: { tab: 'byok' | 'account' | 'prefs'; nonce: number };
   onUpdateState: (updater: (prev: DrafterAppState) => DrafterAppState) => void;
   onNotify: (msg: string) => void;
 }
@@ -31,21 +36,117 @@ interface ModelsPlansTabProps {
 export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
   state,
   initialSubtab = 'byok',
+  requestedSubtab,
   onUpdateState,
   onNotify,
 }) => {
+  const isExtension = isExtensionRuntime();
   const [subtab, setSubtab] = useState<'byok' | 'account' | 'prefs'>(
-    initialSubtab
+    requestedSubtab?.tab ?? initialSubtab
   );
   const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
   const [authName, setAuthName] = useState('');
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [checkoutModalUrl, setCheckoutModalUrl] = useState<string | null>(null);
+  const [healthState, setHealthState] = useState<{
+    status: 'idle' | 'checking' | 'online' | 'offline';
+    detail?: CompanionHealthStatus;
+    error?: string;
+  }>({ status: 'idle' });
+
+  const tokenRef = useRef(state.companionToken);
+  const urlRef = useRef(state.companionUrl);
+  tokenRef.current = state.companionToken;
+  urlRef.current = state.companionUrl;
+
+  useEffect(() => {
+    if (requestedSubtab) {
+      setSubtab(requestedSubtab.tab);
+    }
+  }, [requestedSubtab?.nonce, requestedSubtab?.tab]);
 
   const activeProviderMeta =
     PROVIDER_CATALOG.find((p) => p.id === state.provider) ??
     PROVIDER_CATALOG[0];
+  const eligibleModels = getModelsForProvider(state.provider);
+
+  const checkHealth = useCallback(async (urlToCheck: string) => {
+    setHealthState({ status: 'checking' });
+    try {
+      const detail = await companionHealthCheck(urlToCheck);
+      setHealthState({ status: 'online', detail });
+    } catch (err) {
+      setHealthState({
+        status: 'offline',
+        error: err instanceof Error ? err.message : 'Server unreachable',
+      });
+    }
+  }, []);
+
+
+  const silentRefreshAccount = useCallback(async () => {
+    const token = tokenRef.current;
+    const url = urlRef.current;
+    if (!token) return;
+    try {
+      const user = await companionFetchMe({
+        companionUrl: url,
+        token,
+      });
+      onUpdateState((prev) => ({
+        ...prev,
+        companionUser: user,
+        provider:
+          user.status === 'active' && user.tier !== 'starter'
+            ? 'managed'
+            : prev.provider,
+      }));
+      setCheckoutModalUrl(null);
+      if (user.status === 'active' && user.tier !== 'starter') {
+        onNotify(
+          `Subscription active: ${user.tier.toUpperCase()} (${user.monthlyQuotaTokens.toLocaleString()} tokens/mo).`
+        );
+      }
+    } catch {
+      // Manual Refresh Status remains available if background refresh fails
+    }
+  }, [onUpdateState, onNotify]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'DRAFTER_BILLING_COMPLETE') return;
+      try {
+        const expectedOrigin = new URL(validateCompanionUrl(urlRef.current)).origin;
+        if (
+          event.origin !== expectedOrigin &&
+          event.origin !== window.location.origin
+        ) {
+          return;
+        }
+      } catch {
+        if (event.origin !== window.location.origin) return;
+      }
+      void silentRefreshAccount();
+    };
+    window.addEventListener('message', onMessage);
+
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== 'undefined') {
+      channel = new BroadcastChannel('drafter-billing');
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'DRAFTER_BILLING_COMPLETE') {
+          void silentRefreshAccount();
+        }
+      };
+    }
+
+    return () => {
+      window.removeEventListener('message', onMessage);
+      channel?.close();
+    };
+  }, [silentRefreshAccount]);
 
   const updateKeys = (patch: Partial<ApiKeysConfig>) => {
     onUpdateState((prev) => ({
@@ -140,8 +241,13 @@ export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
             }
           : null,
       }));
-      window.open(session.checkoutUrl, '_blank', 'noopener');
-      onNotify('Opened checkout session in a new tab.');
+      const popup = window.open(session.checkoutUrl, '_blank');
+      if (popup) {
+        onNotify('Opened checkout session in a new tab.');
+      } else {
+        setCheckoutModalUrl(session.checkoutUrl);
+        onNotify('Opened inline Stripe Checkout Simulator.');
+      }
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Checkout failed');
     } finally {
@@ -272,12 +378,26 @@ export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
                 id="byok-provider"
                 className="select"
                 value={state.provider}
-                onChange={(e) =>
-                  onUpdateState((prev) => ({
-                    ...prev,
-                    provider: e.target.value as ProviderId,
-                  }))
-                }
+                onChange={(e) => {
+                  const nextProvider = e.target.value as ProviderId;
+                  onUpdateState((prev) => {
+                    const nextModel = getCompatibleModelForProvider(
+                      nextProvider,
+                      prev.model
+                    );
+                    const nextCompare = getCompatibleModelForProvider(
+                      nextProvider,
+                      prev.compareModel,
+                      nextModel
+                    );
+                    return {
+                      ...prev,
+                      provider: nextProvider,
+                      model: nextModel,
+                      compareModel: nextCompare,
+                    };
+                  });
+                }}
               >
                 {PROVIDER_CATALOG.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -285,30 +405,51 @@ export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
                   </option>
                 ))}
               </select>
+              <span className="muted">{activeProviderMeta.description}</span>
             </div>
 
-            <div className="field">
-              <label className="field-label" htmlFor="byok-model">
-                Default Model
-              </label>
-              <select
-                id="byok-model"
-                className="select"
-                value={state.model}
-                onChange={(e) =>
-                  onUpdateState((prev) => ({ ...prev, model: e.target.value }))
-                }
-              >
-                {MODEL_CATALOG.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {state.provider === 'ollama' ? (
+              <div className="field">
+                <label className="field-label" htmlFor="byok-model-ollama">
+                  Default Ollama Model
+                </label>
+                <input
+                  id="byok-model-ollama"
+                  className="input mono"
+                  value={state.apiKeys.ollamaModel}
+                  onChange={(e) => updateKeys({ ollamaModel: e.target.value })}
+                />
+              </div>
+            ) : (
+              <div className="field">
+                <label className="field-label" htmlFor="byok-model">
+                  Default Model
+                </label>
+                <select
+                  id="byok-model"
+                  className="select"
+                  value={state.model}
+                  onChange={(e) =>
+                    onUpdateState((prev) => ({
+                      ...prev,
+                      model: e.target.value,
+                    }))
+                  }
+                >
+                  {eligibleModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="subcard muted">
-              Your BYOK API keys stay locally in <code>chrome.storage.local</code>{' '}
+              Your BYOK API keys stay locally in{' '}
+              <code>
+                {isExtension ? 'chrome.storage.local' : 'browser localStorage'}
+              </code>{' '}
               on your device and are never uploaded to Drafter servers.
             </div>
           </section>
@@ -412,47 +553,75 @@ export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
           <section className="card stack">
             <div className="row-between">
               <div className="card-title">Companion Server &amp; Account</div>
-              {user && (
-                <div className="row">
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    disabled={busy}
-                    onClick={handleRefreshAccount}
-                  >
-                    Refresh Status
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger-link btn-sm"
-                    onClick={() =>
-                      onUpdateState((prev) => ({
-                        ...prev,
-                        companionToken: '',
-                        companionUser: null,
-                      }))
-                    }
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
+              <div className="row">
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={healthState.status === 'checking'}
+                  onClick={() => void checkHealth(state.companionUrl)}
+                >
+                  {healthState.status === 'checking'
+                    ? 'Checking...'
+                    : 'Check Server'}
+                </button>
+                {user && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      disabled={busy}
+                      onClick={handleRefreshAccount}
+                    >
+                      Refresh Status
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger-link btn-sm"
+                      onClick={() =>
+                        onUpdateState((prev) => ({
+                          ...prev,
+                          companionToken: '',
+                          companionUser: null,
+                        }))
+                      }
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="field">
-              <label className="field-label" htmlFor="companion-url">
-                Companion Server URL
-              </label>
+              <div className="row-between">
+                <label className="field-label" htmlFor="companion-url">
+                  Companion Server URL
+                </label>
+                {healthState.status === 'online' && healthState.detail && (
+                  <span className="badge badge-accent">
+                    Server Online ·{' '}
+                    {healthState.detail.mode === 'live'
+                      ? 'Live OpenRouter'
+                      : 'Sandbox Billing & AI'}
+                  </span>
+                )}
+                {healthState.status === 'offline' && (
+                  <span className="badge badge-danger">
+                    Server Offline ({healthState.error})
+                  </span>
+                )}
+              </div>
               <input
                 id="companion-url"
                 className="input mono"
                 value={state.companionUrl}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setHealthState({ status: 'idle' });
                   onUpdateState((prev) => ({
                     ...prev,
                     companionUrl: e.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
             </div>
 
@@ -561,15 +730,26 @@ export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
                 </div>
 
                 {user.pendingCheckoutUrl && (
-                  <div className="muted">
-                    Pending checkout link:{' '}
-                    <a
-                      href={user.pendingCheckoutUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                  <div className="row-between muted">
+                    <span>
+                      Pending checkout:{' '}
+                      <a
+                        href={user.pendingCheckoutUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open Checkout Page
+                      </a>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={() =>
+                        setCheckoutModalUrl(user.pendingCheckoutUrl!)
+                      }
                     >
-                      Open Checkout Page
-                    </a>
+                      Open Checkout Here
+                    </button>
                   </div>
                 )}
 
@@ -707,7 +887,7 @@ export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
               </div>
               <div className="muted">
                 Automatically read page/email subject and thread when opening
-                Popup or Side Panel.
+                the Chrome Extension Popup or Side Panel.
               </div>
             </div>
             <input
@@ -787,6 +967,33 @@ export const ModelsPlansTab: React.FC<ModelsPlansTabProps> = ({
             />
           </div>
         </section>
+      )}
+
+      {checkoutModalUrl && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Stripe Checkout Simulator"
+        >
+          <div className="modal-card modal-card-wide stack">
+            <div className="row-between">
+              <div className="card-title">Stripe Checkout Simulator</div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setCheckoutModalUrl(null)}
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              title="Stripe Checkout Simulator"
+              src={checkoutModalUrl}
+              className="checkout-iframe"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

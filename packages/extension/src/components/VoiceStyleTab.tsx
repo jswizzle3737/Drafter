@@ -351,7 +351,12 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
               multiple
               accept=".txt,.md,.docx,.pdf,.eml,.html,.htm"
               aria-label="Upload Writing Examples"
-              onChange={(e) => handleUploadSamples(e.target.files)}
+              onChange={(e) => {
+                const files = e.target.files;
+                void handleUploadSamples(files).finally(() => {
+                  e.target.value = '';
+                });
+              }}
             />
           </div>
 

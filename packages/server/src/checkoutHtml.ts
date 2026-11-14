@@ -155,13 +155,32 @@ export function renderCheckoutSandboxHtml(params: {
       ${featuresHtml}
     </ul>
     <button id="complete-btn" class="btn" type="button" ${btnDisabled}>${btnText}</button>
-    <p id="success-msg" class="success-msg">Subscription active! You can return to the Drafter extension tab and click Refresh Account.</p>
+    <p id="success-msg" class="success-msg">Subscription active! You can return to Drafter and click Refresh Status.</p>
     <p id="error-msg" class="error-msg"></p>
   </main>
   <script>
     const btn = document.getElementById('complete-btn');
     const successMsg = document.getElementById('success-msg');
     const errorMsg = document.getElementById('error-msg');
+    function notifyDrafter() {
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const ch = new BroadcastChannel('drafter-billing');
+          ch.postMessage({ type: 'DRAFTER_BILLING_COMPLETE' });
+          ch.close();
+        }
+      } catch {}
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({ type: 'DRAFTER_BILLING_COMPLETE' }, '*');
+        }
+      } catch {}
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'DRAFTER_BILLING_COMPLETE' }, '*');
+        }
+      } catch {}
+    }
     btn.addEventListener('click', async () => {
       if (btn.disabled) return;
       btn.disabled = true;
@@ -177,6 +196,7 @@ export function renderCheckoutSandboxHtml(params: {
         if (!res.ok) throw new Error(data.error || 'Payment failed');
         btn.textContent = 'Subscribed!';
         successMsg.style.display = 'block';
+        notifyDrafter();
       } catch (err) {
         btn.disabled = false;
         btn.textContent = 'Complete Subscription Payment';

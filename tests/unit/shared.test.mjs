@@ -4,6 +4,7 @@ import { zipSync, strToU8 } from 'fflate';
 import {
   analyzeWritingSamples,
   buildPrecedentIndex,
+  buildSandboxDraft,
   chunkPrecedentDocument,
   compileDraftPrompt,
   computeLineDiff,
@@ -11,6 +12,8 @@ import {
   DEFAULT_VOICE_PROFILE,
   DEFAULT_WRITING_SAMPLES,
   extractTextFromDocxBytes,
+  getCompatibleModelForProvider,
+  getModelsForProvider,
   isLoopbackHostname,
   rankPrecedents,
   selectVoiceSamples,
@@ -188,4 +191,72 @@ test('extractTextFromDocxBytes parses DOCX XML paragraphs cleanly', () => {
 
   const text = extractTextFromDocxBytes(bytes);
   assert.equal(text, 'First clause & scope\n\nSecond paragraph\ncontinued line');
+});
+
+test('buildSandboxDraft respects greeting, signoff, precedent content, refinements, and A/B models', () => {
+  const v1 = buildSandboxDraft({
+    subject: 'Annual SaaS Renewal & Discount Request',
+    recipient: 'sarah.chen@acme.example',
+    instruction: 'Decline 25% discount and offer 10% for 24-month commitment.',
+    intent: 'Negotiate / Pushback',
+    model: 'anthropic/claude-sonnet-4.5',
+    authorName: 'Alex',
+    preferredGreeting: 'Hi {{name}},',
+    preferredSignOff: 'Best,\nAlex',
+    signatureBlock: 'VP Partnerships',
+    appliedPrecedentTitles: ['SaaS Annual Renewal & Discount Pushback Policy'],
+    appliedPrecedentGuidance: ['Never offer >10% discount without a 24-month commitment.'],
+  });
+  assert.ok(v1.startsWith('Subject: Re: Annual SaaS Renewal & Discount Request'));
+  assert.ok(v1.includes('Hi Sarah,'));
+  assert.ok(v1.includes('10% loyalty credit'));
+  assert.ok(v1.includes('VP Partnerships'));
+  assert.ok(!v1.includes('..'));
+
+  const v1Alt = buildSandboxDraft({
+    subject: 'Annual SaaS Renewal & Discount Request',
+    recipient: 'sarah.chen@acme.example',
+    instruction: 'Decline 25% discount and offer 10% for 24-month commitment.',
+    intent: 'Negotiate / Pushback',
+    model: 'openai/gpt-4.1',
+    authorName: 'Alex',
+    appliedPrecedentTitles: ['SaaS Annual Renewal & Discount Pushback Policy'],
+  });
+  assert.notEqual(v1Alt, v1);
+
+  const v2 = buildSandboxDraft({
+    subject: 'Annual SaaS Renewal & Discount Request',
+    recipient: 'sarah.chen@acme.example',
+    instruction: 'Decline 25% discount and offer 10% for 24-month commitment.',
+    intent: 'Negotiate / Pushback',
+    previousDraft: v1,
+    refinement: 'Make it shorter and punchier without losing key points',
+    authorName: 'Alex',
+    appliedPrecedentTitles: ['SaaS Annual Renewal & Discount Pushback Policy'],
+  });
+  assert.ok(v2.includes('keeping this concise'));
+  assert.ok(v2.includes('10% loyalty credit'));
+  assert.ok(!v2.includes('..'));
+
+  const nonRenewal = buildSandboxDraft({
+    subject: 'Q4 Implementation Timeline',
+    recipient: 'maya@client.example',
+    instruction: 'Confirm security sign-off happens next Wednesday.',
+    intent: 'Email Reply',
+    model: 'anthropic/claude-sonnet-4.5',
+    appliedPrecedentTitles: ['Vendor SLA Playbook'],
+  });
+  assert.ok(nonRenewal.includes('Following Vendor SLA Playbook, confirm security sign-off'));
+  assert.ok(!nonRenewal.includes('..'));
+});
+
+test('getModelsForProvider and getCompatibleModelForProvider select valid provider models', () => {
+  const openaiModels = getModelsForProvider('openai');
+  assert.ok(openaiModels.length >= 2);
+  assert.ok(openaiModels.every((m) => m.providerHints.includes('openai')));
+  const adapted = getCompatibleModelForProvider('openai', 'anthropic/claude-sonnet-4.5');
+  assert.ok(adapted.startsWith('openai/'));
+  const distinctCompare = getCompatibleModelForProvider('openai', 'openai/gpt-4.1', 'openai/gpt-4.1');
+  assert.equal(distinctCompare, 'openai/gpt-4o');
+  assert.equal(getModelsForProvider('ollama').length, 0);
 });

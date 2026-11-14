@@ -12,6 +12,8 @@
     "build:server": "npm --workspace=@drafter/shared run build && npm --workspace=@drafter/server run build",
     "build:extension": "npm --workspace=@drafter/shared run build && npm --workspace=@drafter/extension run build",
     "dev:server": "npm run build:server && node packages/server/dist/cli.js",
+    "start": "node packages/server/dist/cli.js",
+    "chrome": "npm run build:extension && node scripts/launch-chrome.mjs",
     "test": "npm run test:unit && npm run test:server",
     "test:unit": "npm run build:shared && node --test tests/unit/*.test.mjs",
     "test:server": "npm run build:server && node --test tests/server/*.test.mjs",
