@@ -201,6 +201,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const targetId = await resolveTargetWebTabId(message.tabId);
       if (targetId) {
         try {
+          await chrome.sidePanel.setOptions({
+            tabId: targetId,
+            path: 'sidepanel.html',
+            enabled: true,
+          });
           await chrome.sidePanel.open({ tabId: targetId });
           sendResponse({ ok: true });
           return;
@@ -213,7 +218,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
+    if (message?.type === 'DRAFTER_CLOSE_SIDEPANEL') {
+      const targetId = await resolveTargetWebTabId(message.tabId);
+      try {
+        chrome.runtime
+          .sendMessage({ type: 'DRAFTER_SIDEPANEL_FORCE_CLOSE' })
+          .catch(() => {});
+      } catch {
+        // Ignore if no listeners
+      }
+      try {
+        if (targetId) {
+          await chrome.sidePanel?.setOptions?.({
+            tabId: targetId,
+            enabled: false,
+          });
+        }
+        await chrome.sidePanel?.setOptions?.({ enabled: false });
+        if (targetId) {
+          await chrome.sidePanel?.setOptions?.({
+            tabId: targetId,
+            path: 'sidepanel.html',
+            enabled: true,
+          });
+        }
+        await chrome.sidePanel?.setOptions?.({
+          path: 'sidepanel.html',
+          enabled: true,
+        });
+      } catch {
+        // Ignore if sidePanel setOptions is unsupported
+      }
+      sendResponse({ ok: true });
+      return;
+    }
+
     sendResponse({ ok: false, error: 'Unknown message type' });
   })();
   return true;
 });
+

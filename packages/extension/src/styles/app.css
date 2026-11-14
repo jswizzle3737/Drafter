@@ -1,20 +1,284 @@
+/* ==========================================================================
+   Drafter Personal AI Studio — 15 Interface Designs (PromptOptimizer System)
+   ========================================================================== */
+
+:root {
+  --font-sans: system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI',
+    'SF Pro Text', Roboto, Inter, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco,
+    'Cascadia Mono', Consolas, monospace;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* 1. Ink (dark) — neutral slate with steel-blue accent */
 :root,
-[data-theme='light'] {
-  --bg-canvas: #f3f6f9;
-  --bg-surface: #ffffff;
-  --bg-sunken: #f8fafc;
-  --bg-hover: #f1f5f9;
-  --text-primary: #111827;
-  --text-secondary: #374151;
-  --text-muted: #6b7280;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --accent: #0f9d58;
-  --accent-hover: #0b8043;
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-canvas: #0b0d12;
+  --bg-surface: #12151c;
+  --bg-sunken: #08090d;
+  --bg-hover: rgba(255, 255, 255, 0.055);
+  --text-primary: #eceff5;
+  --text-secondary: #9aa4b8;
+  --text-muted: #7e8aa0;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --accent: #3b72c4;
+  --accent-hover: #4c84d6;
   --accent-fg: #ffffff;
-  --accent-soft: #e6f6ee;
-  --accent-border: #8ad6ad;
-  --accent-text: #0b8043;
+  --accent-soft: rgba(59, 114, 196, 0.16);
+  --accent-border: rgba(59, 114, 196, 0.42);
+  --accent-text: #8fb4e8;
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --diff-del-bg: rgba(239, 68, 68, 0.16);
+  --diff-del-fg: #fca5a5;
+  --diff-add-bg: rgba(16, 185, 129, 0.16);
+  --diff-add-fg: #6ee7b7;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 14px 36px rgba(0, 0, 0, 0.55);
+}
+
+/* 2. Terminal — phosphor green on near-black, monospace, sharp corners */
+[data-theme='terminal'] {
+  color-scheme: dark;
+  --font-sans: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas,
+    monospace;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --bg-canvas: #080b08;
+  --bg-surface: #0e130e;
+  --bg-sunken: #050705;
+  --bg-hover: rgba(160, 255, 160, 0.06);
+  --text-primary: #d6e8d2;
+  --text-secondary: #9db69a;
+  --text-muted: #82a07f;
+  --border: rgba(150, 230, 150, 0.16);
+  --border-strong: rgba(150, 230, 150, 0.28);
+  --accent: #4fbf63;
+  --accent-hover: #63d077;
+  --accent-fg: #04130a;
+  --accent-soft: rgba(79, 191, 99, 0.14);
+  --accent-border: rgba(79, 191, 99, 0.42);
+  --accent-text: #7bd88b;
+  --danger: #ef8277;
+  --danger-soft: rgba(239, 130, 119, 0.14);
+  --diff-del-bg: rgba(239, 130, 119, 0.16);
+  --diff-del-fg: #f4a096;
+  --diff-add-bg: rgba(79, 191, 99, 0.16);
+  --diff-add-fg: #7bd88b;
+  --shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.8);
+}
+
+/* 3. Ember — warm charcoal, burnt orange */
+[data-theme='ember'] {
+  color-scheme: dark;
+  --bg-canvas: #110e0c;
+  --bg-surface: #191512;
+  --bg-sunken: #0b0907;
+  --bg-hover: rgba(255, 220, 190, 0.055);
+  --text-primary: #f2eae3;
+  --text-secondary: #b9aba0;
+  --text-muted: #9b8c80;
+  --border: rgba(255, 215, 185, 0.12);
+  --border-strong: rgba(255, 215, 185, 0.22);
+  --accent: #b8531b;
+  --accent-hover: #cf6326;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(217, 120, 58, 0.16);
+  --accent-border: rgba(217, 120, 58, 0.42);
+  --accent-text: #f09c67;
+  --danger: #f28b82;
+  --danger-soft: rgba(242, 139, 130, 0.14);
+  --diff-del-bg: rgba(242, 139, 130, 0.16);
+  --diff-del-fg: #f6a9a2;
+  --diff-add-bg: rgba(76, 195, 138, 0.16);
+  --diff-add-fg: #7bdcab;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* 4. Harbor — deep sea teal, soft generous corners */
+[data-theme='harbor'] {
+  color-scheme: dark;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --bg-canvas: #071214;
+  --bg-surface: #0c1c1f;
+  --bg-sunken: #040c0e;
+  --bg-hover: rgba(200, 255, 250, 0.055);
+  --text-primary: #e3f1f0;
+  --text-secondary: #96b4b3;
+  --text-muted: #7f9e9e;
+  --border: rgba(190, 245, 240, 0.12);
+  --border-strong: rgba(190, 245, 240, 0.22);
+  --accent: #17807c;
+  --accent-hover: #1e948f;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(47, 183, 176, 0.16);
+  --accent-border: rgba(47, 183, 176, 0.4);
+  --accent-text: #5ccac4;
+  --danger: #f58a80;
+  --danger-soft: rgba(245, 138, 128, 0.14);
+  --diff-del-bg: rgba(245, 138, 128, 0.16);
+  --diff-del-fg: #f8a9a1;
+  --diff-add-bg: rgba(82, 214, 143, 0.16);
+  --diff-add-fg: #7de3ac;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 20px 48px rgba(0, 0, 0, 0.7);
+}
+
+/* 5. Contrast — pure black and white for maximum legibility, square corners */
+[data-theme='contrast'] {
+  color-scheme: dark;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --bg-canvas: #000000;
+  --bg-surface: #080808;
+  --bg-sunken: #000000;
+  --bg-hover: rgba(255, 255, 255, 0.12);
+  --text-primary: #ffffff;
+  --text-secondary: #e0e0e0;
+  --text-muted: #c4c4c4;
+  --border: rgba(255, 255, 255, 0.55);
+  --border-strong: rgba(255, 255, 255, 0.85);
+  --accent: #ffffff;
+  --accent-hover: #e6e6e6;
+  --accent-fg: #000000;
+  --accent-soft: rgba(255, 255, 255, 0.16);
+  --accent-border: rgba(255, 255, 255, 0.75);
+  --accent-text: #ffffff;
+  --danger: #ff7b7b;
+  --danger-soft: rgba(255, 123, 123, 0.18);
+  --diff-del-bg: rgba(255, 123, 123, 0.2);
+  --diff-del-fg: #ff9c9c;
+  --diff-add-bg: rgba(77, 255, 156, 0.2);
+  --diff-add-fg: #7dffb6;
+  --shadow-sm: 0 0 0 1px rgba(255, 255, 255, 0.35);
+  --shadow-md: 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+/* 6. Amethyst — deep violet, elegant serif */
+[data-theme='amethyst'] {
+  color-scheme: dark;
+  --font-sans: 'ITC Benguiat', 'Bodoni 72', 'Didot', 'Bodoni Moda', Georgia,
+    serif;
+  --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --bg-canvas: #0d0915;
+  --bg-surface: #16101f;
+  --bg-sunken: #08050e;
+  --bg-hover: rgba(210, 180, 255, 0.06);
+  --text-primary: #f0e8fa;
+  --text-secondary: #b8a8d0;
+  --text-muted: #9a8ba8;
+  --border: rgba(200, 160, 245, 0.15);
+  --border-strong: rgba(200, 160, 245, 0.26);
+  --accent: #a855f7;
+  --accent-hover: #b872f9;
+  --accent-fg: #0d0915;
+  --accent-soft: rgba(168, 85, 247, 0.16);
+  --accent-border: rgba(168, 85, 247, 0.42);
+  --accent-text: #d8b4fe;
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --diff-del-bg: rgba(248, 113, 113, 0.16);
+  --diff-del-fg: #fca5a5;
+  --diff-add-bg: rgba(52, 211, 153, 0.16);
+  --diff-add-fg: #6ee7b7;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 18px 44px rgba(0, 0, 0, 0.75);
+}
+
+/* 7. Midnight — rich indigo, gold accent */
+[data-theme='midnight'] {
+  color-scheme: dark;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --bg-canvas: #060915;
+  --bg-surface: #0c1428;
+  --bg-sunken: #04060e;
+  --bg-hover: rgba(245, 158, 11, 0.06);
+  --text-primary: #eef2ff;
+  --text-secondary: #a5b4fc;
+  --text-muted: #818cf8;
+  --border: rgba(165, 180, 252, 0.14);
+  --border-strong: rgba(165, 180, 252, 0.26);
+  --accent: #f59e0b;
+  --accent-hover: #fbbf24;
+  --accent-fg: #060915;
+  --accent-soft: rgba(245, 158, 11, 0.15);
+  --accent-border: rgba(245, 158, 11, 0.42);
+  --accent-text: #fde68a;
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --diff-del-bg: rgba(248, 113, 113, 0.16);
+  --diff-del-fg: #fca5a5;
+  --diff-add-bg: rgba(52, 211, 153, 0.16);
+  --diff-add-fg: #6ee7b7;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 20px 48px rgba(0, 0, 0, 0.8);
+}
+
+/* 8. Aurora — teal-cyan on near-black, technical mono */
+[data-theme='aurora'] {
+  color-scheme: dark;
+  --font-sans: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Monaco,
+    monospace;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --bg-canvas: #051014;
+  --bg-surface: #0a1f26;
+  --bg-sunken: #030a0d;
+  --bg-hover: rgba(6, 214, 160, 0.06);
+  --text-primary: #d0f5eb;
+  --text-secondary: #8fd4c1;
+  --text-muted: #74b8a3;
+  --border: rgba(6, 214, 160, 0.16);
+  --border-strong: rgba(6, 214, 160, 0.28);
+  --accent: #06d6a0;
+  --accent-hover: #12e8b4;
+  --accent-fg: #02100c;
+  --accent-soft: rgba(6, 214, 160, 0.14);
+  --accent-border: rgba(6, 214, 160, 0.42);
+  --accent-text: #5ef7cc;
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.14);
+  --diff-del-bg: rgba(255, 107, 107, 0.16);
+  --diff-del-fg: #ff9e9e;
+  --diff-add-bg: rgba(6, 214, 160, 0.16);
+  --diff-add-fg: #5ef7cc;
+  --shadow-sm: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.85);
+}
+
+/* 9. Paper (light) — crisp white, steel blue */
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-canvas: #f6f7f9;
+  --bg-surface: #ffffff;
+  --bg-sunken: #eef1f5;
+  --bg-hover: rgba(15, 23, 42, 0.045);
+  --text-primary: #141821;
+  --text-secondary: #475062;
+  --text-muted: #626c7c;
+  --border: #dfe3eb;
+  --border-strong: #c6cedc;
+  --accent: #2f62ae;
+  --accent-hover: #245193;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(47, 98, 174, 0.1);
+  --accent-border: rgba(47, 98, 174, 0.32);
+  --accent-text: #245193;
   --danger: #dc2626;
   --danger-soft: rgba(220, 38, 38, 0.08);
   --diff-del-bg: rgba(239, 68, 68, 0.12);
@@ -25,31 +289,199 @@
   --shadow-md: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
-[data-theme='dark'] {
-  --bg-canvas: #121519;
-  --bg-surface: #181c22;
-  --bg-sunken: #121519;
-  --bg-hover: #212730;
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --border: #2a313c;
-  --border-strong: #3c4656;
-  --accent: #5eead4;
-  --accent-solid: #4ade9a;
-  --accent-hover: #34d399;
-  --accent-fg: #062819;
-  --accent-soft: rgba(74, 222, 154, 0.12);
-  --accent-border: rgba(74, 222, 154, 0.48);
-  --accent-text: #4ade9a;
-  --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.14);
-  --diff-del-bg: rgba(239, 68, 68, 0.16);
-  --diff-del-fg: #fca5a5;
-  --diff-add-bg: rgba(16, 185, 129, 0.16);
-  --diff-add-fg: #6ee7b7;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --shadow-md: 0 14px 36px rgba(0, 0, 0, 0.45);
+/* 10. Manuscript — cream paper, serif text, oxblood accent */
+[data-theme='manuscript'] {
+  color-scheme: light;
+  --font-sans: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
+    Charter, Georgia, serif;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --bg-canvas: #f1eadb;
+  --bg-surface: #fbf7ec;
+  --bg-sunken: #e9e0cc;
+  --bg-hover: rgba(60, 40, 10, 0.05);
+  --text-primary: #2a2118;
+  --text-secondary: #5b4e40;
+  --text-muted: #66584a;
+  --border: #d8cdb4;
+  --border-strong: #bfb190;
+  --accent: #8c2f2b;
+  --accent-hover: #a23a35;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(140, 47, 43, 0.1);
+  --accent-border: rgba(140, 47, 43, 0.32);
+  --accent-text: #8c2f2b;
+  --danger: #a12622;
+  --danger-soft: rgba(161, 38, 34, 0.1);
+  --diff-del-bg: rgba(161, 38, 34, 0.12);
+  --diff-del-fg: #8c2f2b;
+  --diff-add-bg: rgba(47, 107, 58, 0.12);
+  --diff-add-fg: #2f6b3a;
+  --shadow-sm: 0 1px 2px rgba(60, 40, 10, 0.08);
+  --shadow-md: 0 14px 32px rgba(60, 40, 10, 0.16);
+}
+
+/* 11. Sand — warm stone with terracotta accent, rounded geometry */
+[data-theme='sand'] {
+  color-scheme: light;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --bg-canvas: #eee8e0;
+  --bg-surface: #faf8f4;
+  --bg-sunken: #e6dfd5;
+  --bg-hover: rgba(50, 35, 20, 0.05);
+  --text-primary: #231f1b;
+  --text-secondary: #5a524a;
+  --text-muted: #645c53;
+  --border: #dad1c4;
+  --border-strong: #c2b7a6;
+  --accent: #a8461f;
+  --accent-hover: #bc5329;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(168, 70, 31, 0.1);
+  --accent-border: rgba(168, 70, 31, 0.32);
+  --accent-text: #8f3a18;
+  --danger: #b3261e;
+  --danger-soft: rgba(179, 38, 30, 0.1);
+  --diff-del-bg: rgba(179, 38, 30, 0.12);
+  --diff-del-fg: #b3261e;
+  --diff-add-bg: rgba(47, 107, 74, 0.12);
+  --diff-add-fg: #2f6b4a;
+  --shadow-sm: 0 1px 3px rgba(50, 35, 20, 0.08);
+  --shadow-md: 0 16px 36px rgba(50, 35, 20, 0.16);
+}
+
+/* 12. Glacier — cool blue-grey with deep teal accent */
+[data-theme='glacier'] {
+  color-scheme: light;
+  --font-sans: 'Bahnschrift', 'Segoe UI Variable Display', 'SF Pro Display',
+    'Helvetica Neue', system-ui, sans-serif;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --bg-canvas: #e9f0f4;
+  --bg-surface: #f7fafc;
+  --bg-sunken: #dfe8ee;
+  --bg-hover: rgba(14, 26, 34, 0.045);
+  --text-primary: #0e1a22;
+  --text-secondary: #475a66;
+  --text-muted: #52636f;
+  --border: #d0dbe4;
+  --border-strong: #b3c3d0;
+  --accent: #0f6483;
+  --accent-hover: #157a9f;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(15, 100, 131, 0.1);
+  --accent-border: rgba(15, 100, 131, 0.32);
+  --accent-text: #0b5069;
+  --danger: #c62828;
+  --danger-soft: rgba(198, 40, 40, 0.1);
+  --diff-del-bg: rgba(198, 40, 40, 0.12);
+  --diff-del-fg: #c62828;
+  --diff-add-bg: rgba(11, 122, 85, 0.12);
+  --diff-add-fg: #0b7a55;
+  --shadow-sm: 0 1px 2px rgba(14, 26, 34, 0.07);
+  --shadow-md: 0 14px 32px rgba(14, 26, 34, 0.14);
+}
+
+/* 13. Meadow — pale sage with forest-green accent */
+[data-theme='meadow'] {
+  color-scheme: light;
+  --font-sans: 'Seaford', 'Avenir Next', 'Gill Sans Nova',
+    'Segoe UI Variable Text', system-ui, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --bg-canvas: #ecf1e7;
+  --bg-surface: #f8faf4;
+  --bg-sunken: #e3eadc;
+  --bg-hover: rgba(23, 32, 26, 0.045);
+  --text-primary: #17201a;
+  --text-secondary: #4a5a4e;
+  --text-muted: #546558;
+  --border: #cfd9c6;
+  --border-strong: #b4c2a8;
+  --accent: #2f6b3f;
+  --accent-hover: #3a7f4c;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(47, 107, 63, 0.1);
+  --accent-border: rgba(47, 107, 63, 0.32);
+  --accent-text: #25572f;
+  --danger: #b3261e;
+  --danger-soft: rgba(179, 38, 30, 0.1);
+  --diff-del-bg: rgba(179, 38, 30, 0.12);
+  --diff-del-fg: #b3261e;
+  --diff-add-bg: rgba(31, 122, 68, 0.12);
+  --diff-add-fg: #1f7a44;
+  --shadow-sm: 0 1px 2px rgba(23, 32, 26, 0.07);
+  --shadow-md: 0 14px 32px rgba(23, 32, 26, 0.14);
+}
+
+/* 14. Rose — blush pink with soft rounded corners */
+[data-theme='rose'] {
+  color-scheme: light;
+  --font-sans: 'Nunito', 'Quicksand', 'Comfortaa', 'Segoe UI Variable Text',
+    system-ui, sans-serif;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --bg-canvas: #fff1f3;
+  --bg-surface: #fffdfe;
+  --bg-sunken: #fdeef2;
+  --bg-hover: rgba(190, 24, 93, 0.045);
+  --text-primary: #4a0e2a;
+  --text-secondary: #7d2e52;
+  --text-muted: #9d4a6e;
+  --border: #f8bbd9;
+  --border-strong: #f48fb1;
+  --accent: #be185d;
+  --accent-hover: #d63384;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(190, 24, 93, 0.1);
+  --accent-border: rgba(190, 24, 93, 0.32);
+  --accent-text: #9d174d;
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --diff-del-bg: rgba(220, 38, 38, 0.12);
+  --diff-del-fg: #dc2626;
+  --diff-add-bg: rgba(4, 120, 87, 0.12);
+  --diff-add-fg: #047857;
+  --shadow-sm: 0 1px 3px rgba(190, 24, 93, 0.08);
+  --shadow-md: 0 16px 36px rgba(190, 24, 93, 0.16);
+}
+
+/* 15. Ochre — earthy clay with slab serif */
+[data-theme='ochre'] {
+  color-scheme: light;
+  --font-sans: 'Sohne Buch', 'Roboto Slab', 'Arvo', 'Charter', Georgia, serif;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --bg-canvas: #f5efe6;
+  --bg-surface: #fdfbf7;
+  --bg-sunken: #ede4d7;
+  --bg-hover: rgba(160, 82, 45, 0.05);
+  --text-primary: #2d1f14;
+  --text-secondary: #5c4a38;
+  --text-muted: #6b5642;
+  --border: #d8ccb8;
+  --border-strong: #c4b49e;
+  --accent: #a0522d;
+  --accent-hover: #b85c3a;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(160, 82, 45, 0.1);
+  --accent-border: rgba(160, 82, 45, 0.32);
+  --accent-text: #884526;
+  --danger: #b3261e;
+  --danger-soft: rgba(179, 38, 30, 0.1);
+  --diff-del-bg: rgba(179, 38, 30, 0.12);
+  --diff-del-fg: #b3261e;
+  --diff-add-bg: rgba(47, 107, 74, 0.12);
+  --diff-add-fg: #2f6b4a;
+  --shadow-sm: 0 1px 2px rgba(80, 45, 25, 0.08);
+  --shadow-md: 0 14px 32px rgba(80, 45, 25, 0.16);
 }
 
 *,
@@ -62,7 +494,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13.5px;
   line-height: 1.5;
   background: var(--bg-canvas);
@@ -77,6 +509,7 @@ body {
 
 .drafter-shell {
   min-height: 100vh;
+  font-family: var(--font-sans);
   background: var(--bg-canvas);
   color: var(--text-primary);
   display: flex;
@@ -107,9 +540,9 @@ body {
 .brand-icon {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #4ade9a 0%, #10b981 100%);
-  color: #062819;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--accent-fg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -135,19 +568,21 @@ body {
   align-items: center;
   background: var(--bg-sunken);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 3px;
   gap: 2px;
+  flex-wrap: wrap;
 }
 
 .nav-pill {
   border: none;
   background: transparent;
   color: var(--text-muted);
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   padding: 6px 13px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.14s ease, color 0.14s ease;
   white-space: nowrap;
@@ -168,6 +603,201 @@ body {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Close Side Panel Button */
+.btn-close-panel {
+  border-color: var(--border-strong);
+  font-weight: 700;
+}
+
+.btn-close-panel:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Compact Theme Dropdown Menu (Header) */
+.theme-menu-wrap {
+  position: relative;
+}
+
+.theme-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.theme-swatch-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.swatch-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  display: inline-block;
+}
+
+.theme-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 280px;
+  max-height: 410px;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: 90;
+  padding: 6px;
+}
+
+.theme-dropdown-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 6px 10px 4px;
+}
+
+.theme-dropdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-dropdown-item {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.theme-dropdown-item:hover {
+  background: var(--bg-hover);
+}
+
+.theme-dropdown-item.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.theme-dropdown-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.theme-dropdown-name {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.theme-dropdown-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.theme-dropdown-check {
+  font-weight: 800;
+  color: var(--accent-text);
+  font-size: 13px;
+}
+
+/* 15-Design Gallery Grid (Settings & Themes Tab) */
+.design-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.design-card {
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.14s ease, transform 0.1s ease, box-shadow 0.14s ease;
+}
+
+.design-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.design-card.selected {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.design-card-preview {
+  height: 54px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.design-card-surface {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.design-card-accent-bar {
+  width: 44%;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.design-card-accent-pill {
+  width: 22px;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.design-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.design-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.design-card-desc {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* Main Content */
@@ -236,7 +866,7 @@ body {
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 15px 16px;
   box-shadow: var(--shadow-sm);
 }
@@ -244,7 +874,7 @@ body {
 .subcard {
   background: var(--bg-sunken);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
 }
 
@@ -330,10 +960,11 @@ body {
   justify-content: center;
   gap: 6px;
   padding: 7px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-surface);
   color: var(--text-primary);
+  font-family: inherit;
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
@@ -358,11 +989,6 @@ body {
   color: var(--accent-fg);
 }
 
-[data-theme='dark'] .btn-primary {
-  background: #4ade9a;
-  color: #062819;
-}
-
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
 }
@@ -370,13 +996,13 @@ body {
 .btn-lg {
   padding: 11px 16px;
   font-size: 13.5px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
 }
 
 .btn-sm {
   padding: 4px 9px;
   font-size: 12px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
 }
 
 .btn-danger-link {
@@ -399,6 +1025,7 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-surface);
   color: var(--text-secondary);
+  font-family: inherit;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -435,7 +1062,7 @@ body {
   width: 100%;
   background: var(--bg-sunken);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 8px 10px;
   color: var(--text-primary);
   font: inherit;
@@ -457,7 +1084,7 @@ body {
 
 .range-slider {
   width: 100%;
-  accent-color: #10b981;
+  accent-color: var(--accent);
   cursor: pointer;
 }
 
@@ -465,7 +1092,7 @@ body {
 .draft-body-box {
   background: var(--bg-sunken);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 14px 16px;
   min-height: 220px;
   white-space: pre-wrap;
@@ -475,16 +1102,16 @@ body {
 }
 
 .draft-source-box {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12.5px;
 }
 
 .diff-box {
   background: var(--bg-sunken);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12.5px;
   overflow-x: auto;
 }
@@ -519,7 +1146,7 @@ body {
 .list-item {
   border: 1px solid var(--border);
   background: var(--bg-surface);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 11px 12px;
   cursor: pointer;
   transition: border-color 0.14s ease, background 0.14s ease;
@@ -536,7 +1163,7 @@ body {
 
 .upload-zone {
   border: 1px dashed var(--border-strong);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px;
   text-align: center;
   background: var(--bg-sunken);
@@ -576,7 +1203,7 @@ body {
   overflow-y: auto;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   padding: 18px 20px;
   box-shadow: var(--shadow-md);
 }
@@ -585,17 +1212,10 @@ body {
   max-width: 560px;
 }
 
-.checkout-iframe {
-  width: 100%;
-  height: 540px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #f3f5f8;
-}
-
 /* Interactive Badges & Provider Helpers */
 button.badge {
   cursor: pointer;
+  font-family: inherit;
 }
 
 .provider-hint-bar {
@@ -612,23 +1232,19 @@ button.badge {
   right: 18px;
   bottom: 18px;
   z-index: 80;
-  background: #111827;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--accent-fg);
   padding: 9px 14px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   font-size: 12.5px;
   font-weight: 600;
   box-shadow: var(--shadow-md);
 }
 
-[data-theme='dark'] .toast {
-  background: #4ade9a;
-  color: #062819;
-}
-
 /* Popup Layout */
 .popup-shell {
   padding: 14px;
+  font-family: var(--font-sans);
   background: var(--bg-canvas);
   color: var(--text-primary);
   display: flex;
@@ -642,15 +1258,15 @@ button.badge {
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 .prompt-pre {
   background: var(--bg-sunken);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 10px 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 11.5px;
   white-space: pre-wrap;
   max-height: 280px;

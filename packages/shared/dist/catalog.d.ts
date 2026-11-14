@@ -1,4 +1,7 @@
-import type { DraftIntent, ExtensionPreferences, ModelOption, PrecedentDocument, ProviderId, ProviderMeta, SubscriptionPlan, VoiceProfile, WritingSample } from './types.js';
+import type { DesignThemeMeta, DraftIntent, ExtensionPreferences, ModelOption, PrecedentDocument, ProviderId, ProviderMeta, SubscriptionPlan, ThemeMode, VoiceProfile, WritingSample } from './types.js';
+export declare const DESIGN_THEMES: DesignThemeMeta[];
+export declare function normalizeThemeId(id?: string): ThemeMode;
+export declare function getDesignTheme(id?: string): DesignThemeMeta;
 export declare const INTENT_PRESETS: DraftIntent[];
 export declare const REFINEMENT_CHIPS: string[];
 export declare const TONE_PRESETS: string[];

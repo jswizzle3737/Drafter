@@ -1,4 +1,28 @@
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode =
+  | 'dark'
+  | 'terminal'
+  | 'ember'
+  | 'harbor'
+  | 'contrast'
+  | 'amethyst'
+  | 'midnight'
+  | 'aurora'
+  | 'light'
+  | 'manuscript'
+  | 'sand'
+  | 'glacier'
+  | 'meadow'
+  | 'rose'
+  | 'ochre';
+
+export interface DesignThemeMeta {
+  id: ThemeMode;
+  name: string;
+  desc: string;
+  mode: 'dark' | 'light';
+  swatch: [string, string, string];
+}
+
 
 export type ProviderId =
   | 'sandbox'

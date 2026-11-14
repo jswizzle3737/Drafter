@@ -106,7 +106,7 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
     targetSubtab: 'byok' | 'account';
     ctaLabel: string;
   } | null => {
-    if (state.provider === 'sandbox') {
+    if (state.provider === 'sandbox' || state.provider === 'managed') {
       return {
         tone: 'info',
         message:
@@ -114,22 +114,6 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
         targetSubtab: 'byok',
         ctaLabel: 'Configure API Key',
       };
-    }
-    if (state.provider === 'managed') {
-      const hasActivePlan =
-        Boolean(state.companionToken) &&
-        state.companionUser?.status === 'active' &&
-        state.companionUser.tier !== 'starter';
-      if (!hasActivePlan) {
-        return {
-          tone: 'warn',
-          message:
-            'Managed Subscription requires signing in and activating Pro or Team.',
-          targetSubtab: 'account',
-          ctaLabel: 'Open Account & Plans',
-        };
-      }
-      return null;
     }
     if (state.provider === 'ollama') {
       if (!isLoopbackHostname(state.apiKeys.ollamaUrl)) {
@@ -155,18 +139,14 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
     if (cfg && !cfg.value.trim()) {
       return {
         tone: 'warn',
-        message: `Add your ${cfg.label} API key under Models & Plans, or switch to Demo Sandbox.`,
+        message: `Add your ${cfg.label} API key under Settings & Themes, or switch to Demo Sandbox.`,
         targetSubtab: 'byok',
         ctaLabel: 'Add API Key',
       };
     }
     return null;
-  }, [
-    state.provider,
-    state.companionToken,
-    state.companionUser,
-    state.apiKeys,
-  ]);
+  }, [state.provider, state.apiKeys]);
+
 
   const compiled = useMemo(
     () =>

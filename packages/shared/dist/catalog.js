@@ -1,3 +1,120 @@
+export const DESIGN_THEMES = [
+    {
+        id: 'dark',
+        name: 'Ink',
+        desc: 'Dark · slate, steel blue',
+        mode: 'dark',
+        swatch: ['#0B0D12', '#12151C', '#3B72C4'],
+    },
+    {
+        id: 'terminal',
+        name: 'Terminal',
+        desc: 'Dark · phosphor green, monospace',
+        mode: 'dark',
+        swatch: ['#080B08', '#0E130E', '#4FBF63'],
+    },
+    {
+        id: 'ember',
+        name: 'Ember',
+        desc: 'Dark · warm charcoal, burnt orange',
+        mode: 'dark',
+        swatch: ['#110E0C', '#191512', '#B8531B'],
+    },
+    {
+        id: 'harbor',
+        name: 'Harbor',
+        desc: 'Dark · deep teal, soft corners',
+        mode: 'dark',
+        swatch: ['#071214', '#0C1C1F', '#17807C'],
+    },
+    {
+        id: 'contrast',
+        name: 'Contrast',
+        desc: 'Dark · black and white, maximum legibility',
+        mode: 'dark',
+        swatch: ['#000000', '#080808', '#FFFFFF'],
+    },
+    {
+        id: 'amethyst',
+        name: 'Amethyst',
+        desc: 'Dark · deep violet, elegant serif',
+        mode: 'dark',
+        swatch: ['#0D0915', '#16101F', '#A855F7'],
+    },
+    {
+        id: 'midnight',
+        name: 'Midnight',
+        desc: 'Dark · rich indigo, gold accent',
+        mode: 'dark',
+        swatch: ['#060915', '#0C1428', '#F59E0B'],
+    },
+    {
+        id: 'aurora',
+        name: 'Aurora',
+        desc: 'Dark · teal-cyan, technical mono',
+        mode: 'dark',
+        swatch: ['#051014', '#0A1F26', '#06D6A0'],
+    },
+    {
+        id: 'light',
+        name: 'Paper',
+        desc: 'Light · crisp white, steel blue',
+        mode: 'light',
+        swatch: ['#F6F7F9', '#FFFFFF', '#2F62AE'],
+    },
+    {
+        id: 'manuscript',
+        name: 'Manuscript',
+        desc: 'Light · cream, serif, oxblood',
+        mode: 'light',
+        swatch: ['#F1EADB', '#FBF7EC', '#8C2F2B'],
+    },
+    {
+        id: 'sand',
+        name: 'Sand',
+        desc: 'Light · warm stone, terracotta',
+        mode: 'light',
+        swatch: ['#EEE8E0', '#FAF8F4', '#A8461F'],
+    },
+    {
+        id: 'glacier',
+        name: 'Glacier',
+        desc: 'Light · cool grey, deep teal',
+        mode: 'light',
+        swatch: ['#E9F0F4', '#F7FAFC', '#0F6483'],
+    },
+    {
+        id: 'meadow',
+        name: 'Meadow',
+        desc: 'Light · pale sage, forest green',
+        mode: 'light',
+        swatch: ['#ECF1E7', '#F8FAF4', '#2F6B3F'],
+    },
+    {
+        id: 'rose',
+        name: 'Rose',
+        desc: 'Light · blush pink, soft rounded',
+        mode: 'light',
+        swatch: ['#FFF1F3', '#FFFDFE', '#BE185D'],
+    },
+    {
+        id: 'ochre',
+        name: 'Ochre',
+        desc: 'Light · earthy clay, slab serif',
+        mode: 'light',
+        swatch: ['#F5EFE6', '#FDFBF7', '#A0522D'],
+    },
+];
+export function normalizeThemeId(id) {
+    if (!id)
+        return 'dark';
+    const found = DESIGN_THEMES.find((t) => t.id === id);
+    return found ? found.id : 'dark';
+}
+export function getDesignTheme(id) {
+    const norm = normalizeThemeId(id);
+    return DESIGN_THEMES.find((t) => t.id === norm) ?? DESIGN_THEMES[0];
+}
 export const INTENT_PRESETS = [
     'Email Reply',
     'Cold Outreach',
@@ -29,18 +146,11 @@ export const PROVIDER_CATALOG = [
         description: 'Runs instant precedent- and voice-grounded draft previews offline inside the extension without needing an API key.',
     },
     {
-        id: 'managed',
-        label: 'Drafter Managed Subscription',
-        shortLabel: 'Managed',
-        requiresKey: false,
-        description: 'Uses your Drafter Pro/Team managed token quota via the Companion Server.',
-    },
-    {
         id: 'openrouter',
         label: 'OpenRouter (All Top Models)',
         shortLabel: 'OpenRouter',
         requiresKey: true,
-        description: 'Single BYOK key for Claude, GPT, Gemini, DeepSeek, and Grok.',
+        description: 'Single personal API key for Claude, GPT, Gemini, DeepSeek, and Grok.',
     },
     {
         id: 'anthropic',

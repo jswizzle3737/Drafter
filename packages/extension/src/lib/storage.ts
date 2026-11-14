@@ -6,6 +6,7 @@ import {
   extractTextFromDocxBytes,
   extractTextFromEml,
   extractTextFromHtml,
+  normalizeThemeId,
   type ApiKeysConfig,
   type DraftSession,
   type ExtensionPreferences,
@@ -83,7 +84,7 @@ export function createInitialState(): DrafterAppState {
     precedents: DEFAULT_PRECEDENTS,
     writingSamples: DEFAULT_WRITING_SAMPLES,
     voiceProfile: DEFAULT_VOICE_PROFILE,
-    provider: 'openrouter',
+    provider: 'sandbox',
     model: 'anthropic/claude-sonnet-4.5',
     compareModel: 'openai/gpt-4.1',
     apiKeys: {
@@ -123,9 +124,15 @@ export async function loadAppState(): Promise<DrafterAppState> {
       STORAGE_KEYS.QUICK_INSTRUCTION,
     ]);
     const saved = (raw[STORAGE_KEYS.STATE] ?? {}) as Partial<DrafterAppState>;
+    const normalizedProvider: ProviderId =
+      saved.provider === 'managed'
+        ? 'sandbox'
+        : (saved.provider ?? defaults.provider);
     const merged: DrafterAppState = {
       ...defaults,
       ...saved,
+      theme: saved.theme ? normalizeThemeId(saved.theme) : defaults.theme,
+      provider: normalizedProvider,
       apiKeys: { ...defaults.apiKeys, ...(saved.apiKeys ?? {}) },
       voiceProfile: {
         ...defaults.voiceProfile,
@@ -157,9 +164,15 @@ export async function loadAppState(): Promise<DrafterAppState> {
     const json = window.localStorage.getItem(STORAGE_KEYS.STATE);
     if (!json) return defaults;
     const saved = JSON.parse(json) as Partial<DrafterAppState>;
+    const normalizedProvider: ProviderId =
+      saved.provider === 'managed'
+        ? 'sandbox'
+        : (saved.provider ?? defaults.provider);
     return {
       ...defaults,
       ...saved,
+      theme: saved.theme ? normalizeThemeId(saved.theme) : defaults.theme,
+      provider: normalizedProvider,
       apiKeys: { ...defaults.apiKeys, ...(saved.apiKeys ?? {}) },
       preferences: { ...defaults.preferences, ...(saved.preferences ?? {}) },
       capturedContext: saved.capturedContext
@@ -178,6 +191,22 @@ export async function loadAppState(): Promise<DrafterAppState> {
     return defaults;
   }
 }
+
+export async function closeSidePanelWindow(): Promise<void> {
+  if (isExtensionRuntime()) {
+    try {
+      await chrome.runtime.sendMessage({ type: 'DRAFTER_CLOSE_SIDEPANEL' });
+    } catch {
+      // Ignore if background service worker is idle
+    }
+  }
+  try {
+    window.close();
+  } catch {
+    // Ignore outside closeable window
+  }
+}
+
 
 export async function saveAppState(state: DrafterAppState): Promise<void> {
   if (hasChromeStorage()) {
