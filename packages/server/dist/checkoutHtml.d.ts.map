@@ -1,0 +1,1 @@
+{"version":3,"file":"checkoutHtml.d.ts","sourceRoot":"","sources":["../src/checkoutHtml.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,gBAAgB,EAAE,MAAM,iBAAiB,CAAC;AAWxD,wBAAgB,yBAAyB,CAAC,MAAM,EAAE;IAChD,SAAS,EAAE,MAAM,CAAC;IAClB,KAAK,EAAE,MAAM,CAAC;IACd,IAAI,EAAE,gBAAgB,CAAC;IACvB,SAAS,EAAE,OAAO,CAAC;CACpB,GAAG,MAAM,CAiMT"}
