@@ -113,10 +113,10 @@ test('rankPrecedents inverted index scales across 250 documents under 50ms', () 
   assert.ok(elapsedMs < 50, `Expected <50ms, took ${elapsedMs.toFixed(2)}ms`);
 });
 
-test('analyzeWritingSamples and selectVoiceSamples capture style metrics and match tone', () => {
+test('analyzeWritingSamples and selectVoiceSamples capture style metrics, essays, and voice instructions', () => {
   const analysis = analyzeWritingSamples(DEFAULT_WRITING_SAMPLES);
-  assert.equal(analysis.activeCount, 2);
-  assert.ok(analysis.totalWords > 100);
+  assert.equal(analysis.activeCount, 3);
+  assert.ok(analysis.totalWords > 150);
   assert.ok(analysis.avgSentenceLength > 5);
   assert.ok(analysis.contractionRate > 0);
   assert.ok(analysis.commonOpenings.some((o) => /Maya/i.test(o)));
@@ -129,9 +129,17 @@ test('analyzeWritingSamples and selectVoiceSamples capture style metrics and mat
   );
   assert.equal(selected.length, 1);
   assert.equal(selected[0].id, 'voice-warm-client');
+
+  const essaySelected = selectVoiceSamples(
+    DEFAULT_WRITING_SAMPLES,
+    'Essay long-form narrative observation',
+    1
+  );
+  assert.equal(essaySelected.length, 1);
+  assert.equal(essaySelected[0].id, 'voice-essay-sample');
 });
 
-test('compileDraftPrompt, splitSubjectAndBody, and computeLineDiff behave deterministically', () => {
+test('compileDraftPrompt, splitSubjectAndBody, and computeLineDiff behave deterministically and include voice instructions', () => {
   const compiled = compileDraftPrompt({
     context: {
       kind: 'email',
@@ -145,12 +153,15 @@ test('compileDraftPrompt, splitSubjectAndBody, and computeLineDiff behave determ
     },
     intent: 'Email Reply',
     instruction: 'Decline 25% discount and offer 10% for 24-month commitment.',
+    customVoiceInstruction: 'Keep the voice conversational, grounded, and free of corporate clichés.',
     precedents: DEFAULT_PRECEDENTS,
     writingSamples: DEFAULT_WRITING_SAMPLES,
     voiceProfile: DEFAULT_VOICE_PROFILE,
   });
 
   assert.ok(compiled.systemPrompt.includes('=== PERSONAL VOICE & STYLE ==='));
+  assert.ok(compiled.systemPrompt.includes('Voice Instructions for This Draft:\nKeep the voice conversational, grounded, and free of corporate clichés.'));
+  assert.ok(compiled.systemPrompt.includes('Voice Instructions for "'));
   assert.ok(compiled.systemPrompt.includes('SaaS Annual Renewal'));
   assert.ok(compiled.userPrompt.includes('buyer@acme.example'));
   assert.equal(compiled.appliedPrecedents[0].document.id, 'prec-renewal-discount');

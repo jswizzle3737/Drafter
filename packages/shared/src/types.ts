@@ -37,12 +37,16 @@ export type SubscriptionTierId = 'starter' | 'pro' | 'team';
 
 export type DraftIntent =
   | 'Email Reply'
+  | 'Work Update / Slack'
+  | 'Job Application / Cover Letter'
+  | 'Essay / Long-Form'
   | 'Cold Outreach'
   | 'Follow-Up'
   | 'Negotiate / Pushback'
   | 'Decline Politely'
   | 'Status Update'
-  | 'Web Form / Comment';
+  | 'Web Form / Comment'
+  | 'General / Anything';
 
 export interface PrecedentDocument {
   id: string;
@@ -78,6 +82,7 @@ export interface WritingSample {
   id: string;
   title: string;
   contextTag: string;
+  voiceInstructions?: string;
   content: string;
   active: boolean;
   createdAt: string;
@@ -153,6 +158,7 @@ export interface DraftSession {
   intent: DraftIntent;
   instruction: string;
   voiceToneOverride: string;
+  customVoiceInstruction?: string;
   versions: DraftVersion[];
   pinnedPrecedentIds: string[];
   excludedPrecedentIds: string[];

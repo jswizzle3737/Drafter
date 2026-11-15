@@ -70,6 +70,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
 
   const [voiceToneOverride, setVoiceToneOverride] =
     useState('Personal Default');
+  const [customVoiceInstruction, setCustomVoiceInstruction] = useState('');
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [versions, setVersions] = useState<DraftVersion[]>([]);
@@ -218,6 +219,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
     setVersions([]);
     setActiveVersionIndex(0);
     setInstruction('');
+    setCustomVoiceInstruction('');
     setPinnedIds([]);
     setExcludedIds([]);
     persistState((prev) => ({ ...prev, activeSessionId: '' }));
@@ -252,6 +254,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
       intent,
       instruction,
       voiceToneOverride,
+      customVoiceInstruction,
       versions: nextVersions,
       pinnedPrecedentIds: pinnedIds,
       excludedPrecedentIds: excludedIds,
@@ -282,6 +285,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
         writingSamples: state.writingSamples,
         voiceProfile: state.voiceProfile,
         voiceToneOverride,
+        customVoiceInstruction,
         previousDraft: refinement ? currentActive?.rawText : undefined,
         refinementInstruction: refinement,
         maxPrecedents: state.preferences.maxPrecedentsInPrompt,
@@ -301,6 +305,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
         preferredGreeting: state.voiceProfile.preferredGreeting,
         preferredSignOff: state.voiceProfile.preferredSignOff,
         signatureBlock: state.voiceProfile.signatureBlock,
+        customVoiceInstruction,
         previousDraft: refinement ? currentActive?.rawText : undefined,
         refinementInstruction: refinement,
         apiKeys: state.apiKeys,
@@ -323,6 +328,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
             preferredGreeting: state.voiceProfile.preferredGreeting,
             preferredSignOff: state.voiceProfile.preferredSignOff,
             signatureBlock: state.voiceProfile.signatureBlock,
+            customVoiceInstruction,
             apiKeys: state.apiKeys,
             companionUrl: state.companionUrl,
             companionToken: state.companionToken,
@@ -490,6 +496,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
             intent={intent}
             instruction={instruction}
             voiceToneOverride={voiceToneOverride}
+            customVoiceInstruction={customVoiceInstruction}
             pinnedIds={pinnedIds}
             excludedIds={excludedIds}
             versions={versions}
@@ -499,6 +506,10 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
             onIntentChange={setIntent}
             onInstructionChange={setInstruction}
             onVoiceToneOverrideChange={setVoiceToneOverride}
+            onCustomVoiceInstructionChange={setCustomVoiceInstruction}
+            onSamplesChange={(writingSamples) =>
+              persistState((prev) => ({ ...prev, writingSamples }))
+            }
             onContextChange={(ctx) =>
               persistState((prev) => ({ ...prev, capturedContext: ctx }))
             }
@@ -608,6 +619,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
           setIntent(session.intent);
           setInstruction(session.instruction);
           setVoiceToneOverride(session.voiceToneOverride || 'Personal Default');
+          setCustomVoiceInstruction(session.customVoiceInstruction || '');
           setPinnedIds(session.pinnedPrecedentIds ?? []);
           setExcludedIds(session.excludedPrecedentIds ?? []);
           setVersions(session.versions ?? []);

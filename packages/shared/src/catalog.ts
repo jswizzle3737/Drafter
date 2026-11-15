@@ -133,27 +133,49 @@ export function getDesignTheme(id?: string): DesignThemeMeta {
 
 export const INTENT_PRESETS: DraftIntent[] = [
   'Email Reply',
+  'Work Update / Slack',
+  'Job Application / Cover Letter',
+  'Essay / Long-Form',
   'Cold Outreach',
   'Follow-Up',
   'Negotiate / Pushback',
   'Decline Politely',
-  'Status Update',
-  'Web Form / Comment',
+  'General / Anything',
 ];
 
 export const REFINEMENT_CHIPS: string[] = [
   'Make it shorter and punchier without losing key points',
   'Make the tone warmer while keeping boundaries clear',
+  'Match my uploaded essays and personal voice even more naturally',
+  'Tighten structure with clear transitions and concrete takeaways',
   'Align closer to the matched precedent commitments',
-  'Match my personal voice samples even more naturally',
 ];
 
 export const TONE_PRESETS: string[] = [
   'Default Personal Voice',
+  'Natural & Conversational',
+  'Thoughtful Essay / Analytical',
+  'Confident Job / Career Pitch',
+  'Warm & Collaborative Teammate',
+  'Crisp & Direct Work Update',
   'Executive Brief',
   'Warm Client Partner',
   'Firm Negotiation',
-  'Crisp Follow-Up',
+];
+
+export const VOICE_INSTRUCTION_PRESETS: string[] = [
+  'Conversational and human — zero AI clichés or robotic filler',
+  'Reflective, narrative essay style with clear transitions and concrete examples',
+  'Confident, achievement-focused voice for job applications and career outreach',
+  'Warm, concise, and action-oriented for day-to-day work and Slack/email',
+];
+
+export const SAMPLE_CATEGORY_PRESETS: string[] = [
+  'Essay / Article',
+  'Job / Cover Letter',
+  'Day-to-Day Work',
+  'Email / Slack',
+  'General',
 ];
 
 export const PROVIDER_CATALOG: ProviderMeta[] = [
@@ -163,7 +185,7 @@ export const PROVIDER_CATALOG: ProviderMeta[] = [
     shortLabel: 'Demo Sandbox',
     requiresKey: false,
     description:
-      'Runs instant precedent- and voice-grounded draft previews offline inside the extension without needing an API key.',
+      'Runs instant reference- and voice-grounded draft previews offline inside the extension without needing an API key.',
   },
   {
     id: 'openrouter',
@@ -334,6 +356,65 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 
 export const DEFAULT_PRECEDENTS: PrecedentDocument[] = [
   {
+    id: 'prec-job-application',
+    title: 'Job Application, Cover Letter & Recruiter Outreach Playbook',
+    category: 'Career & Jobs',
+    tags: ['job', 'application', 'cover', 'letter', 'recruiter', 'resume', 'interview', 'role'],
+    whenToUse:
+      'Use when writing a cover letter, job application note, recruiter reply, or hiring manager outreach.',
+    guidance:
+      'Connect 2 concrete past projects/metrics directly to the role requirements; keep it under 220 words and sound genuinely human.',
+    body: `# Job Application & Hiring Manager Outreach Guide
+
+When drafting job application notes, cover letters, or recruiter replies:
+1. Open with why this specific team, product, or problem genuinely excites you (skip generic "I am writing to apply for..." openings).
+2. Highlight 2 concrete examples of work shipped or measurable outcomes achieved that map directly to what the role needs.
+3. Keep paragraphs tight and conversational — show how you think and collaborate day to day.
+4. Close with a clear, low-friction next step (e.g., happy to share a work sample or jump on a quick 15-minute intro call).`,
+    enabled: true,
+    pinned: false,
+    updatedAt: '2026-11-12T00:00:00.000Z',
+  },
+  {
+    id: 'prec-essay-structure',
+    title: 'Thoughtful Essay, Article & Long-Form Writing Guide',
+    category: 'Essays & Writing',
+    tags: ['essay', 'article', 'blog', 'reflection', 'thesis', 'argument', 'writing', 'narrative'],
+    whenToUse:
+      'Use when drafting or refining an essay, personal statement, op-ed, post, or analytical write-up.',
+    guidance:
+      'Open with a vivid hook or concrete observation, build a clear central thesis, use natural transitions between paragraphs, and avoid AI filler phrases.',
+    body: `# Essay & Long-Form Narrative Structure
+
+When writing essays, personal statements, or long-form reflections:
+1. Hook & Premise: Begin with a specific observation, tension, or lived moment rather than abstract generalizations.
+2. Voice & Rhythm: Vary sentence length naturally. Pair analytical claims with grounded, specific examples.
+3. Transitions: Connect paragraphs by evolving the core idea rather than relying on mechanical transitions ("Furthermore,", "In conclusion,").
+4. Ending: Close with a resonant takeaway or forward-looking synthesis that leaves the reader with a sharp perspective.`,
+    enabled: true,
+    pinned: false,
+    updatedAt: '2026-11-12T00:00:00.000Z',
+  },
+  {
+    id: 'prec-timeline-extension',
+    title: 'Day-to-Day Work Update, Project Handoff & Timeline Shift',
+    category: 'Day-to-Day Work',
+    tags: ['timeline', 'delay', 'extension', 'deadline', 'update', 'status', 'standup', 'handoff'],
+    whenToUse:
+      'Use for everyday team updates, project check-ins, blockers, or shifting a milestone date.',
+    guidance:
+      'Lead with current status or the revised date directly, identify any blocker clearly, and list concrete next steps.',
+    body: `# Everyday Work Update & Milestone Check-In
+
+When sharing a day-to-day work update or timeline adjustment:
+1. Lead with the headline status or revised target date in the first two sentences.
+2. State what shipped, what is in progress, and any single blocker concisely without fluff.
+3. Outline the immediate next actions and any quick decision or input needed from teammates.`,
+    enabled: true,
+    pinned: false,
+    updatedAt: '2026-11-12T00:00:00.000Z',
+  },
+  {
     id: 'prec-renewal-discount',
     title: 'SaaS Annual Renewal & Discount Pushback Policy',
     category: 'Commercial / Pricing',
@@ -354,39 +435,20 @@ Our standard policy for enterprise renewal discount requests:
     updatedAt: '2026-11-12T00:00:00.000Z',
   },
   {
-    id: 'prec-timeline-extension',
-    title: 'Project Timeline Extension & Stakeholder Notice',
-    category: 'Project Delivery',
-    tags: ['timeline', 'delay', 'extension', 'deadline'],
-    whenToUse:
-      'Use when external dependencies or scope changes require shifting a milestone or launch date.',
-    guidance:
-      'Own the revised date directly, identify the concrete blocker, and propose a crisp mitigation checkpoint.',
-    body: `# Milestone Extension Communication
-
-When communicating a delivery date shift:
-1. Lead with the revised target date in the first two sentences.
-2. State the single root cause concisely without shifting blame or writing a lengthy apology.
-3. Outline the two immediate actions underway and the exact decision or sign-off needed from the stakeholder.`,
-    enabled: true,
-    pinned: false,
-    updatedAt: '2026-11-12T00:00:00.000Z',
-  },
-  {
     id: 'prec-vendor-sla',
-    title: 'Vendor SLA Breach / Late Deliverable Escalation',
-    category: 'Operations / Vendor',
-    tags: ['vendor', 'sla', 'late', 'escalation'],
+    title: 'Partner Follow-Up & Overdue Deliverable Check-In',
+    category: 'Day-to-Day Operations',
+    tags: ['vendor', 'sla', 'late', 'escalation', 'followup', 'partner'],
     whenToUse:
-      'Use when holding a vendor or contractor accountable for a missed SLA or overdue deliverable.',
+      'Use when following up with an external partner, vendor, or collaborator on an overdue deliverable.',
     guidance:
-      'Stay calm and factual, cite the contracted commitment, and require a written recovery schedule within 24 hours.',
-    body: `# Vendor SLA Escalation Notice
+      'Stay calm and factual, reference the agreed date, and ask for a confirmed delivery timestamp within 24 hours.',
+    body: `# Partner Deliverable Follow-Up
 
-When a supplier misses a committed deliverable:
-1. Reference the specific milestone date and contractual SLA without emotional framing.
-2. Document operational impact clearly in 1-2 sentences.
-3. Request an owner-assigned remediation plan with confirmed delivery timestamps by end of next business day.`,
+When a collaborator or supplier misses an agreed milestone:
+1. Reference the specific milestone date and agreed scope clearly and constructively.
+2. Note the downstream impact on the team's schedule in 1-2 sentences.
+3. Ask for an updated delivery plan with confirmed timestamps by end of next business day.`,
     enabled: true,
     pinned: false,
     updatedAt: '2026-11-12T00:00:00.000Z',
@@ -396,8 +458,10 @@ When a supplier misses a committed deliverable:
 export const DEFAULT_WRITING_SAMPLES: WritingSample[] = [
   {
     id: 'voice-exec-update',
-    title: 'Executive Project Update & Ask',
-    contextTag: 'Executive',
+    title: 'Day-to-Day Team Status Update & Ask',
+    contextTag: 'Day-to-Day Work',
+    voiceInstructions:
+      'Crisp, direct, and friendly. Lead with progress metrics, call out blockers plainly, and use numbered asks.',
     content: `Hi Maya,
 
 Quick status on the Q3 onboarding rollout: we're tracking ahead on migration (14 of 16 accounts live) and hitting one dependency snag on SSO metadata from Acme's IT team.
@@ -413,8 +477,10 @@ Alex`,
   },
   {
     id: 'voice-warm-client',
-    title: 'Warm Client Scope Clarification',
+    title: 'Warm Project Collaboration & Career Note',
     contextTag: 'Client',
+    voiceInstructions:
+      'Warm, collaborative, and grounded. Keep sentences natural and conversational without corporate jargon.',
     content: `Hey Jordan,
 
 Great chatting earlier about the analytics dashboard Phase 2 scope. I put together the clean breakdown below so both teams stay aligned on what's included in this sprint versus next month's release.
@@ -423,6 +489,18 @@ We can lock the core cohort export now and queue custom webhook alerts for Phase
 
 Thanks,
 Alex`,
+    active: true,
+    createdAt: '2026-11-12T00:00:00.000Z',
+  },
+  {
+    id: 'voice-essay-sample',
+    title: 'Essay Excerpt: Building Tools People Actually Enjoy Using',
+    contextTag: 'Essay / Article',
+    voiceInstructions:
+      'Use this essay voice for long-form writing, essays, and cover letters: opening with a concrete observation, balancing short punchy sentences with thoughtful reflection, and avoiding robotic transitions.',
+    content: `Most software fails not because it lacks features, but because it forgets the rhythm of a person's actual workday. When you sit down at 9 a.m. with twelve tabs open, you don't want another dashboard to configure—you want a tool that quietly understands what you're trying to say and helps you finish it in half the time.
+
+In my own work building product workflows, I've found that the best tools share three habits: they start from real examples rather than blank pages, they respect the author's natural voice, and they stay out of the way until needed.`,
     active: true,
     createdAt: '2026-11-12T00:00:00.000Z',
   },
@@ -442,7 +520,7 @@ export const DEFAULT_VOICE_PROFILE: VoiceProfile = {
   preferredSignOff: 'Best,\nAlex',
   signatureBlock: '',
   guidanceRules:
-    'Lead with the answer or decision first. Avoid robotic filler ("I hope this email finds you well"). Use concrete dates and numbered next steps when proposing actions.',
+    'Sound natural, human, and grounded—ready for day-to-day work, job applications, or essays. Lead with the main point first, avoid robotic AI filler ("I hope this finds you well", "delve into"), and use concrete examples.',
 };
 
 export const DEFAULT_PREFERENCES: ExtensionPreferences = {

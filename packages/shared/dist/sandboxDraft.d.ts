@@ -10,6 +10,7 @@ export interface SandboxDraftParams {
     preferredGreeting?: string;
     preferredSignOff?: string;
     signatureBlock?: string;
+    customVoiceInstruction?: string;
     appliedPrecedentTitles: string[];
     appliedPrecedentGuidance?: string[];
     footerNote?: string;

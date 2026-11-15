@@ -16,6 +16,7 @@ export function compileDraftPrompt(input) {
         input.context.threadText,
         input.intent,
         input.instruction,
+        input.customVoiceInstruction ?? '',
         input.refinementInstruction ?? '',
     ]
         .filter(Boolean)
@@ -27,15 +28,15 @@ export function compileDraftPrompt(input) {
         minScore: input.minPrecedentScore ?? 15,
     });
     const voiceAnalysis = analyzeWritingSamples(input.writingSamples);
-    const attachedVoiceSamples = selectVoiceSamples(input.writingSamples, `${input.intent} ${input.voiceToneOverride ?? ''} ${input.instruction} ${input.context.subject}`, input.maxVoiceSamples ?? 3);
+    const attachedVoiceSamples = selectVoiceSamples(input.writingSamples, `${input.intent} ${input.voiceToneOverride ?? ''} ${input.customVoiceInstruction ?? ''} ${input.instruction} ${input.context.subject}`, input.maxVoiceSamples ?? 3);
     const vp = input.voiceProfile;
     const effectiveTone = input.voiceToneOverride && input.voiceToneOverride !== 'Personal Default'
         ? input.voiceToneOverride
         : vp.defaultTonePreset;
     const systemLines = [
-        'You are Drafter, an executive AI writing partner.',
-        'Write ready-to-send drafts that strictly follow applicable precedent policies/commitments and match the user’s authentic writing voice.',
-        'Output format: Start with a single `Subject: <concise subject line>` line when drafting an email or threaded message, followed by a blank line and the body text. Do not wrap the response in markdown code fences.',
+        'You are Drafter, a personal AI writing partner for day-to-day work, job applications, essays, emails, and general writing.',
+        'Write ready-to-use drafts that honor any relevant reference notes/precedents and authentically match the user’s personal writing voice, uploaded essays, and voice instructions.',
+        'Output format: Start with a single `Subject: <concise subject or title>` line, followed by a blank line and the body text. Do not wrap the response in markdown code fences.',
         '',
         '=== PERSONAL VOICE & STYLE ===',
         `Author Name: ${vp.displayName || 'Author'}`,
@@ -46,33 +47,45 @@ export function compileDraftPrompt(input) {
         vp.preferredSignOff ? `Preferred Sign-Off:\n${vp.preferredSignOff}` : '',
         vp.signatureBlock ? `Signature Block:\n${vp.signatureBlock}` : '',
         vp.guidanceRules ? `Writing Guidance Rules:\n${vp.guidanceRules}` : '',
+        input.customVoiceInstruction?.trim()
+            ? `Voice Instructions for This Draft:\n${input.customVoiceInstruction.trim()}`
+            : '',
         `Stylometric Fingerprint: ${voiceAnalysis.summary}`,
     ].filter(Boolean);
     if (attachedVoiceSamples.length > 0) {
-        systemLines.push('', '=== REFERENCE VOICE EXAMPLES ===');
+        systemLines.push('', '=== REFERENCE VOICE EXAMPLES & ESSAYS ===');
         for (const sample of attachedVoiceSamples) {
-            systemLines.push(`--- Sample: ${sample.title} [${sample.contextTag || 'General'}] ---`, sample.content.trim());
+            systemLines.push(...[
+                `--- Sample: ${sample.title} [${sample.contextTag || 'General'}] ---`,
+                sample.voiceInstructions?.trim()
+                    ? `Voice Instructions for "${sample.title}": ${sample.voiceInstructions.trim()}`
+                    : '',
+                sample.content.trim(),
+            ].filter(Boolean));
         }
     }
     if (appliedPrecedents.length > 0) {
-        systemLines.push('', '=== RELEVANT PRECEDENTS & GUARDRAILS ===');
+        systemLines.push('', '=== RELEVANT REFERENCE PLAYBOOKS & PRECEDENTS ===');
         for (const item of appliedPrecedents) {
             const doc = item.document;
-            systemLines.push(`--- Precedent: ${doc.title} (${item.score}% match${item.pinned ? ', PINNED' : ''}) ---`, doc.whenToUse ? `When to Apply: ${doc.whenToUse}` : '', doc.guidance ? `Guardrail / Guidance: ${doc.guidance}` : '', `Content:\n${item.bestChunk?.text || doc.body.trim()}`);
+            systemLines.push(`--- Precedent: ${doc.title} (${item.score}% match${item.pinned ? ', PINNED' : ''}) ---`, doc.whenToUse ? `When to Apply: ${doc.whenToUse}` : '', doc.guidance ? `Key Takeaway / Guidance: ${doc.guidance}` : '', `Content:\n${item.bestChunk?.text || doc.body.trim()}`);
         }
     }
     const userLines = [
         `Intent: ${input.intent}`,
-        input.context.subject ? `Context Subject: ${input.context.subject}` : '',
+        input.context.subject ? `Context Subject / Topic: ${input.context.subject}` : '',
         input.context.recipient
-            ? `Recipient / Counterparty: ${input.context.recipient}`
+            ? `Recipient / Audience: ${input.context.recipient}`
             : '',
         input.context.hostname ? `Source Host: ${input.context.hostname}` : '',
         input.context.threadText
-            ? `Incoming Context / Message:\n${input.context.threadText.trim()}`
+            ? `Incoming Context / Notes:\n${input.context.threadText.trim()}`
+            : '',
+        input.customVoiceInstruction?.trim()
+            ? `Voice Instruction to Apply:\n${input.customVoiceInstruction.trim()}`
             : '',
         '',
-        `Drafting Instruction:\n${input.instruction.trim() || `Draft a clear ${input.intent.toLowerCase()} response.`}`,
+        `Drafting Instruction:\n${input.instruction.trim() || `Draft a clear ${input.intent.toLowerCase()} piece.`}`,
     ].filter((l) => l !== '');
     if (input.previousDraft && input.refinementInstruction) {
         userLines.push('', '=== PREVIOUS DRAFT ===', input.previousDraft.trim(), '', `=== REFINEMENT INSTRUCTION ===\n${input.refinementInstruction.trim()}`);

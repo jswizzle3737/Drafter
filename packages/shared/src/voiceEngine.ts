@@ -22,7 +22,7 @@ export function analyzeWritingSamples(samples: WritingSample[]): VoiceAnalysis {
       commonOpenings: [],
       commonClosings: [],
       summary:
-        'No active writing samples yet. Paste or upload 2-5 past emails or memos to build your Personal Voice Fingerprint.',
+        'No active writing samples yet. Upload or paste 2-5 past essays, cover letters, or work notes to build your Personal Voice Fingerprint.',
     };
   }
 
@@ -129,12 +129,14 @@ export function selectVoiceSamples(
   const scored = active.map((sample, idx) => {
     const tagTokens = tokenizeText(sample.contextTag);
     const titleTokens = tokenizeText(sample.title);
+    const instructionTokens = tokenizeText(sample.voiceInstructions ?? '');
     const contentTokens = new Set(tokenizeText(sample.content));
 
     let score = 0;
     for (const qt of queryTokens) {
       if (tagTokens.includes(qt)) score += 5;
       if (titleTokens.includes(qt)) score += 3;
+      if (instructionTokens.includes(qt)) score += 2;
       if (contentTokens.has(qt)) score += 1;
     }
     return { sample, score, idx };
