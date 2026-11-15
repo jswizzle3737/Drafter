@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
+  analyzePageForDraftSuggestions,
   DESIGN_THEMES,
   getDesignTheme,
   rankPrecedents,
@@ -57,6 +58,11 @@ const PopupApp: React.FC = () => {
     return rankPrecedents(state.precedents, query, { limit: 1 })[0] ?? null;
   }, [state.precedents, state.capturedContext, instruction]);
 
+  const pageAnalysis = useMemo(
+    () => analyzePageForDraftSuggestions(state.capturedContext),
+    [state.capturedContext]
+  );
+
   const handleThemeChange = async (themeId: ThemeMode) => {
     const meta = getDesignTheme(themeId);
     const nextState: DrafterAppState = { ...state, theme: meta.id };
@@ -65,23 +71,24 @@ const PopupApp: React.FC = () => {
     await saveAppState(nextState);
   };
 
-  const openSidePanel = () => {
+  const openSidePanel = (instructionOverride?: string) => {
+    const nextInstruction = instructionOverride ?? instruction;
     const { id: tabId, windowId } = activeTabRef.current;
     if (typeof chrome !== 'undefined' && chrome.sidePanel?.open && (tabId || windowId)) {
       const target = tabId ? { tabId } : { windowId: windowId! };
       void chrome.sidePanel.open(target).catch(() => {
         chrome.runtime?.sendMessage?.({ type: 'DRAFTER_OPEN_SIDEPANEL', tabId });
       });
-      void setQuickInstruction(instruction).finally(() => window.close());
+      void setQuickInstruction(nextInstruction).finally(() => window.close());
       return;
     }
     if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-      void setQuickInstruction(instruction).finally(() => {
+      void setQuickInstruction(nextInstruction).finally(() => {
         chrome.runtime.sendMessage({ type: 'DRAFTER_OPEN_SIDEPANEL', tabId });
         window.close();
       });
     } else {
-      void setQuickInstruction(instruction).finally(() => {
+      void setQuickInstruction(nextInstruction).finally(() => {
         window.open('./sidepanel.html', '_blank', 'noopener');
       });
     }
@@ -132,8 +139,8 @@ const PopupApp: React.FC = () => {
 
       <div className="subcard stack" style={{ gap: '6px' }}>
         <div className="row-between">
-          <span className="badge">
-            {state.capturedContext.kind === 'email' ? 'EMAIL' : 'PAGE'}
+          <span className="badge badge-accent">
+            {pageAnalysis.pageBadge}
           </span>
           <span className="muted">
             {state.capturedContext.hostname || 'Ready'}
@@ -144,6 +151,24 @@ const PopupApp: React.FC = () => {
             state.capturedContext.title ||
             'No active page captured yet'}
         </div>
+        {pageAnalysis.suggestions.length > 0 && (
+          <div className="row" style={{ gap: '5px', marginTop: '2px' }}>
+            {pageAnalysis.suggestions.slice(0, 3).map((sug) => (
+              <button
+                key={sug.id}
+                type="button"
+                className="pill-btn"
+                onClick={() => {
+                  setInstruction(sug.instruction);
+                  openSidePanel(sug.instruction);
+                }}
+                title={sug.description}
+              >
+                + {sug.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="field">
@@ -172,7 +197,7 @@ const PopupApp: React.FC = () => {
         <button
           type="button"
           className="btn btn-primary btn-lg"
-          onClick={openSidePanel}
+          onClick={() => openSidePanel()}
         >
           Open Side Panel
         </button>

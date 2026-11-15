@@ -180,6 +180,15 @@ async function runE2E() {
     });
 
     await studioPage
+      .getByText('Suggested Documents for This Page')
+      .waitFor({ timeout: 5000 });
+    await studioPage
+      .getByText('Email Thread Detected')
+      .waitFor({ timeout: 5000 });
+    await studioPage.getByRole('button', { name: 'Draft This →' }).first().click();
+    await studioPage.getByRole('button', { name: 'V1' }).waitFor({ timeout: 5000 });
+
+    await studioPage
       .getByLabel('Drafting Instruction')
       .fill(
         'Reply to Acme declining the 25% discount on annual renewal and offer 10% for a 24-month commitment.'
