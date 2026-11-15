@@ -5,6 +5,8 @@ export declare function getDesignTheme(id?: string): DesignThemeMeta;
 export declare const INTENT_PRESETS: DraftIntent[];
 export declare const REFINEMENT_CHIPS: string[];
 export declare const TONE_PRESETS: string[];
+export declare const VOICE_INSTRUCTION_PRESETS: string[];
+export declare const SAMPLE_CATEGORY_PRESETS: string[];
 export declare const PROVIDER_CATALOG: ProviderMeta[];
 export declare const MODEL_CATALOG: ModelOption[];
 export declare function getModelsForProvider(provider: ProviderId): ModelOption[];

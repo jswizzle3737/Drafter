@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   compileDraftPrompt,
   computeLineDiff,
@@ -8,13 +8,15 @@ import {
   PROVIDER_CATALOG,
   REFINEMENT_CHIPS,
   TONE_PRESETS,
+  VOICE_INSTRUCTION_PRESETS,
   type DraftIntent,
   type DraftVersion,
   type PageContext,
   type PrecedentDocument,
   type ProviderId,
+  type WritingSample,
 } from '@drafter/shared';
-import type { DrafterAppState } from '../lib/storage.js';
+import { parseUploadedDocument, type DrafterAppState } from '../lib/storage.js';
 import type { StudioTabId } from './Header.js';
 
 interface DraftStudioTabProps {
@@ -22,6 +24,7 @@ interface DraftStudioTabProps {
   intent: DraftIntent;
   instruction: string;
   voiceToneOverride: string;
+  customVoiceInstruction: string;
   pinnedIds: string[];
   excludedIds: string[];
   versions: DraftVersion[];
@@ -31,6 +34,8 @@ interface DraftStudioTabProps {
   onIntentChange: (intent: DraftIntent) => void;
   onInstructionChange: (val: string) => void;
   onVoiceToneOverrideChange: (val: string) => void;
+  onCustomVoiceInstructionChange: (val: string) => void;
+  onSamplesChange: (next: WritingSample[]) => void;
   onContextChange: (ctx: PageContext) => void;
   onCaptureTab: () => void;
   onNewDraft: () => void;
@@ -58,6 +63,7 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
   intent,
   instruction,
   voiceToneOverride,
+  customVoiceInstruction,
   pinnedIds,
   excludedIds,
   versions,
@@ -67,6 +73,8 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
   onIntentChange,
   onInstructionChange,
   onVoiceToneOverrideChange,
+  onCustomVoiceInstructionChange,
+  onSamplesChange,
   onContextChange,
   onCaptureTab,
   onNewDraft,
@@ -94,6 +102,7 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
   );
   const [refinementInput, setRefinementInput] = useState('');
   const [promptExpanded, setPromptExpanded] = useState(false);
+  const essayFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeVersion = versions[activeVersionIndex] ?? null;
   const previousVersion =
@@ -110,7 +119,7 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
       return {
         tone: 'info',
         message:
-          'Demo Sandbox is active — test precedent- and voice-grounded drafting offline without an API key.',
+          'Demo Sandbox is active — test voice- and reference-grounded drafting offline without an API key.',
         targetSubtab: 'byok',
         ctaLabel: 'Configure API Key',
       };
@@ -160,6 +169,7 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
         writingSamples: state.writingSamples,
         voiceProfile: state.voiceProfile,
         voiceToneOverride,
+        customVoiceInstruction,
         previousDraft: activeVersion?.rawText,
         refinementInstruction: refinementInput || undefined,
         maxPrecedents: state.preferences.maxPrecedentsInPrompt,
@@ -176,11 +186,41 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
       state.writingSamples,
       state.voiceProfile,
       voiceToneOverride,
+      customVoiceInstruction,
       activeVersion?.rawText,
       refinementInput,
       state.preferences,
     ]
   );
+
+  const handleQuickUploadEssays = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const added: WritingSample[] = [];
+    for (const file of Array.from(files)) {
+      try {
+        const parsed = await parseUploadedDocument(file);
+        added.push({
+          id: `voice-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          title: parsed.title || file.name,
+          contextTag: 'Essay / Article',
+          voiceInstructions: customVoiceInstruction.trim() || undefined,
+          content: parsed.content,
+          active: true,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        onNotify(
+          `Could not read ${file.name}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+    if (added.length > 0) {
+      onSamplesChange([...added, ...state.writingSamples]);
+      onNotify(
+        `Uploaded ${added.length} essay/writing sample(s) into your active Voice DNA.`
+      );
+    }
+  };
 
   const diffLines = useMemo(() => {
     if (!activeVersion) return [];
@@ -360,17 +400,58 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
             className="textarea"
             aria-label="Drafting Instruction"
             rows={3}
-            placeholder="e.g. Reply to Sarah declining the 25% discount request, offer 10% for a 24-month upfront renewal, and propose a Thursday call."
+            placeholder="e.g. Write a cover letter for the Product Engineer role, draft an essay on remote collaboration, or send a quick project update to the team..."
             value={instruction}
             onChange={(e) => onInstructionChange(e.target.value)}
           />
+
+          <div className="subcard stack">
+            <div className="row-between">
+              <label
+                className="field-label"
+                htmlFor="studio-voice-instructions"
+                style={{ margin: 0 }}
+              >
+                Voice Instructions (how the voice should sound)
+              </label>
+              {customVoiceInstruction && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={() => onCustomVoiceInstructionChange('')}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <input
+              id="studio-voice-instructions"
+              className="input"
+              aria-label="Voice Instructions"
+              placeholder="e.g. Match my uploaded essays — thoughtful, conversational, zero AI clichés, and concrete examples..."
+              value={customVoiceInstruction}
+              onChange={(e) => onCustomVoiceInstructionChange(e.target.value)}
+            />
+            <div className="row">
+              {VOICE_INSTRUCTION_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  className={`pill-btn ${customVoiceInstruction === preset ? 'active' : ''}`}
+                  onClick={() => onCustomVoiceInstructionChange(preset)}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
 
-        {/* Matched Precedents */}
+        {/* Matched Precedents & Playbooks */}
         <section className="card stack">
           <div className="row-between">
             <div className="card-title">
-              Matched Precedents ({compiled.appliedPrecedents.length})
+              Matched Reference Playbooks &amp; Precedents ({compiled.appliedPrecedents.length})
             </div>
             <button
               type="button"
@@ -383,8 +464,8 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
 
           {compiled.appliedPrecedents.length === 0 ? (
             <div className="muted">
-              No strong precedent match yet. Add details to your instruction or
-              pin a precedent from your library.
+              No reference playbook matched yet. Add details to your instruction or
+              pin a guide from your library.
             </div>
           ) : (
             <div className="stack">
@@ -456,25 +537,49 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
           )}
         </section>
 
-        {/* Voice DNA */}
+        {/* Voice DNA & Uploaded Essays */}
         <section className="card stack">
           <div className="row-between">
             <div className="card-title">
-              Voice DNA ({compiled.attachedVoiceSamples.length} examples attached)
+              Voice DNA &amp; Essays ({compiled.attachedVoiceSamples.length} examples attached)
             </div>
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => onNavigateTab('voice')}
-            >
-              Edit Voice
-            </button>
+            <div className="row">
+              <input
+                ref={essayFileInputRef}
+                type="file"
+                multiple
+                accept=".txt,.md,.docx,.pdf,.eml,.html,.htm"
+                aria-label="Quick Upload Essay"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const files = e.target.files;
+                  void handleQuickUploadEssays(files).finally(() => {
+                    e.target.value = '';
+                  });
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => essayFileInputRef.current?.click()}
+              >
+                + Upload Essay / Sample
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => onNavigateTab('voice')}
+              >
+                Edit Voice
+              </button>
+            </div>
           </div>
           <div className="muted">{compiled.voiceAnalysis.summary}</div>
           <div className="row">
             {compiled.attachedVoiceSamples.map((s) => (
-              <span key={s.id} className="badge">
+              <span key={s.id} className="badge" title={s.voiceInstructions || s.title}>
                 {s.title} ({s.contextTag || 'General'})
+                {s.voiceInstructions ? ' · ★ Voice Rules' : ''}
               </span>
             ))}
           </div>

@@ -13,7 +13,7 @@ export function analyzeWritingSamples(samples) {
             questionRate: 0,
             commonOpenings: [],
             commonClosings: [],
-            summary: 'No active writing samples yet. Paste or upload 2-5 past emails or memos to build your Personal Voice Fingerprint.',
+            summary: 'No active writing samples yet. Upload or paste 2-5 past essays, cover letters, or work notes to build your Personal Voice Fingerprint.',
         };
     }
     let totalWords = 0;
@@ -94,6 +94,7 @@ export function selectVoiceSamples(samples, contextOrIntent, limit = 3) {
     const scored = active.map((sample, idx) => {
         const tagTokens = tokenizeText(sample.contextTag);
         const titleTokens = tokenizeText(sample.title);
+        const instructionTokens = tokenizeText(sample.voiceInstructions ?? '');
         const contentTokens = new Set(tokenizeText(sample.content));
         let score = 0;
         for (const qt of queryTokens) {
@@ -101,6 +102,8 @@ export function selectVoiceSamples(samples, contextOrIntent, limit = 3) {
                 score += 5;
             if (titleTokens.includes(qt))
                 score += 3;
+            if (instructionTokens.includes(qt))
+                score += 2;
             if (contentTokens.has(qt))
                 score += 1;
         }

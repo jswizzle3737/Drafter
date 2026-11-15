@@ -25,6 +25,7 @@ export interface GenerateDraftParams {
   preferredGreeting?: string;
   preferredSignOff?: string;
   signatureBlock?: string;
+  customVoiceInstruction?: string;
   previousDraft?: string;
   refinementInstruction?: string;
   apiKeys: ApiKeysConfig;
@@ -256,6 +257,7 @@ export async function generateDraft(
       preferredGreeting: params.preferredGreeting,
       preferredSignOff: params.preferredSignOff,
       signatureBlock: params.signatureBlock,
+      customVoiceInstruction: params.customVoiceInstruction,
       appliedPrecedentTitles: compiled.appliedPrecedents.map(
         (p) => p.document.title
       ),

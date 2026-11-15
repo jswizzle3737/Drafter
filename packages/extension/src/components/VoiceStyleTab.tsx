@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import {
   analyzeWritingSamples,
+  SAMPLE_CATEGORY_PRESETS,
   TONE_PRESETS,
+  VOICE_INSTRUCTION_PRESETS,
   type VoiceProfile,
   type WritingSample,
 } from '@drafter/shared';
@@ -57,15 +59,16 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
   const handlePasteNew = () => {
     const nextSample: WritingSample = {
       id: `voice-${Date.now()}`,
-      title: 'New Writing Sample',
-      contextTag: 'General',
+      title: 'New Essay or Writing Sample',
+      contextTag: 'Essay / Article',
+      voiceInstructions: '',
       content: '',
       active: true,
       createdAt: new Date().toISOString(),
     };
     onSamplesChange([nextSample, ...writingSamples]);
     setSelectedId(nextSample.id);
-    onNotify('Added new writing sample.');
+    onNotify('Added new essay / writing sample.');
   };
 
   const handleDeleteSample = () => {
@@ -85,7 +88,9 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
         added.push({
           id: `voice-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           title: parsed.title || file.name,
-          contextTag: 'Imported',
+          contextTag: 'Essay / Article',
+          voiceInstructions:
+            'Match the natural cadence, vocabulary, and paragraph flow from this uploaded piece.',
           content: parsed.content,
           active: true,
           createdAt: new Date().toISOString(),
@@ -99,7 +104,7 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
     if (added.length > 0) {
       onSamplesChange([...added, ...writingSamples]);
       setSelectedId(added[0].id);
-      onNotify(`Uploaded ${added.length} writing sample(s).`);
+      onNotify(`Uploaded ${added.length} essay/writing sample(s).`);
     }
   };
 
@@ -151,7 +156,7 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
       {/* Split Controls & Examples */}
       <div className="split-grid voice-grid">
         <section className="card stack">
-          <div className="card-title">Writing Guidance &amp; Style Controls</div>
+          <div className="card-title">Voice Instructions &amp; Style Controls</div>
 
           <div className="grid-2">
             <div className="field">
@@ -177,7 +182,7 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
               <input
                 id="vp-role"
                 className="input"
-                placeholder="e.g. Founder, Counsel, Account Lead"
+                placeholder="e.g. Product Manager, Software Engineer, Writer, Student"
                 value={voiceProfile.roleContext}
                 onChange={(e) =>
                   onProfileChange({
@@ -210,6 +215,45 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="field">
+            <label className="field-label" htmlFor="vp-rules">
+              Instructions on the Voice Used (Global Voice Rules)
+            </label>
+            <textarea
+              id="vp-rules"
+              className="textarea"
+              aria-label="Global Voice Instructions"
+              rows={3}
+              placeholder="Describe how your voice should sound across day-to-day work, job applications, and essays..."
+              value={voiceProfile.guidanceRules}
+              onChange={(e) =>
+                onProfileChange({
+                  ...voiceProfile,
+                  guidanceRules: e.target.value,
+                })
+              }
+            />
+            <div className="row" style={{ marginTop: '6px' }}>
+              {VOICE_INSTRUCTION_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  className="pill-btn"
+                  onClick={() =>
+                    onProfileChange({
+                      ...voiceProfile,
+                      guidanceRules: voiceProfile.guidanceRules.trim()
+                        ? `${voiceProfile.guidanceRules.trim()}\n• ${preset}`
+                        : preset,
+                    })
+                  }
+                >
+                  + {preset}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="subcard stack">
@@ -295,7 +339,7 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
               id="vp-sig"
               className="textarea"
               rows={2}
-              placeholder="Title, company, phone, scheduling link..."
+              placeholder="Role, portfolio/LinkedIn link, phone..."
               value={voiceProfile.signatureBlock}
               onChange={(e) =>
                 onProfileChange({
@@ -305,46 +349,28 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
               }
             />
           </div>
-
-          <div className="field">
-            <label className="field-label" htmlFor="vp-rules">
-              My Writing Guidance Rules
-            </label>
-            <textarea
-              id="vp-rules"
-              className="textarea"
-              rows={3}
-              value={voiceProfile.guidanceRules}
-              onChange={(e) =>
-                onProfileChange({
-                  ...voiceProfile,
-                  guidanceRules: e.target.value,
-                })
-              }
-            />
-          </div>
         </section>
 
         <section className="card stack">
           <div className="row-between">
             <div className="card-title">
-              My Writing Examples ({writingSamples.length})
+              Uploaded Essays &amp; Writing Samples ({writingSamples.length})
             </div>
             <button
               type="button"
               className="btn btn-primary btn-sm"
               onClick={handlePasteNew}
             >
-              + Paste Sample
+              + New Essay / Sample
             </button>
           </div>
 
           <div className="upload-zone stack">
             <div style={{ fontWeight: 700, fontSize: '12.5px' }}>
-              Upload Past Emails, Memos, or Posts
+              Upload Essays, Cover Letters, Articles, or Work Notes
             </div>
             <div className="muted">
-              Supports .txt, .md, .docx, .pdf, .eml, .html
+              Supports .txt, .md, .docx, .pdf, .eml, .html — automatically extracts your voice &amp; style
             </div>
             <input
               type="file"
@@ -369,6 +395,11 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700 }}>{s.title}</div>
+                  {s.voiceInstructions && (
+                    <div className="muted" style={{ fontSize: '11.5px' }}>
+                      Voice instruction: {s.voiceInstructions.slice(0, 80)}
+                    </div>
+                  )}
                   <div className="muted">
                     {s.content.replace(/\s+/g, ' ').slice(0, 74)}...
                   </div>
@@ -381,7 +412,7 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
           {selectedSample && (
             <div className="subcard stack">
               <div className="row-between">
-                <div className="card-title">Edit Writing Example</div>
+                <div className="card-title">Edit Essay / Writing Sample</div>
                 <div className="row">
                   <label className="row" style={{ cursor: 'pointer' }}>
                     <input
@@ -406,7 +437,7 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
               <div className="grid-2">
                 <div className="field">
                   <label className="field-label" htmlFor="sample-title">
-                    Example Title
+                    Essay / Sample Title
                   </label>
                   <input
                     id="sample-title"
@@ -419,7 +450,7 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
                 </div>
                 <div className="field">
                   <label className="field-label" htmlFor="sample-tag">
-                    Context Tag
+                    Category / Context Tag
                   </label>
                   <input
                     id="sample-tag"
@@ -432,14 +463,47 @@ export const VoiceStyleTab: React.FC<VoiceStyleTabProps> = ({
                 </div>
               </div>
 
+              <div className="row">
+                {SAMPLE_CATEGORY_PRESETS.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`pill-btn ${selectedSample.contextTag === cat ? 'active' : ''}`}
+                    onClick={() => updateSelectedSample({ contextTag: cat })}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="field">
+                <label
+                  className="field-label"
+                  htmlFor="sample-voice-instructions"
+                >
+                  Voice Instructions for This Essay / Sample (optional)
+                </label>
+                <input
+                  id="sample-voice-instructions"
+                  className="input"
+                  aria-label="Sample Voice Instructions"
+                  placeholder="e.g. Use the narrative hook and analytical rhythm from this essay, while keeping sentences crisp..."
+                  value={selectedSample.voiceInstructions ?? ''}
+                  onChange={(e) =>
+                    updateSelectedSample({ voiceInstructions: e.target.value })
+                  }
+                />
+              </div>
+
               <div className="field">
                 <label className="field-label" htmlFor="sample-body">
-                  Your Original Writing Sample
+                  Essay or Writing Sample Content
                 </label>
                 <textarea
                   id="sample-body"
                   className="textarea"
                   rows={8}
+                  placeholder="Paste your essay, cover letter, article, or work note here..."
                   value={selectedSample.content}
                   onChange={(e) =>
                     updateSelectedSample({ content: e.target.value })

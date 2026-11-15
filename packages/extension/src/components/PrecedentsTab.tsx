@@ -57,9 +57,9 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
   const handleCreateNew = () => {
     const doc: PrecedentDocument = {
       id: `prec-${Date.now()}`,
-      title: 'New Precedent Policy',
-      category: 'General',
-      tags: ['policy'],
+      title: 'New Reference Playbook / Template',
+      category: 'Day-to-Day Work',
+      tags: ['work', 'template'],
       whenToUse: '',
       guidance: '',
       body: '',
@@ -69,7 +69,7 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
     };
     onChange([doc, ...precedents]);
     setSelectedId(doc.id);
-    onNotify('Created new precedent.');
+    onNotify('Created new reference playbook.');
   };
 
   const handleDeleteSelected = () => {
@@ -112,7 +112,7 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
     if (added.length > 0) {
       onChange([...added, ...precedents]);
       setSelectedId(added[0].id);
-      onNotify(`Imported ${added.length} precedent document(s).`);
+      onNotify(`Imported ${added.length} reference document(s).`);
     }
   };
 
@@ -122,25 +122,25 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
       <section className="card stack">
         <div className="row-between">
           <div className="card-title">
-            <span>Precedent Similarity Radar</span>
+            <span>Reference &amp; Precedent Similarity Radar</span>
             <span className="badge badge-accent">{activeCount} active</span>
           </div>
           <span className="muted">
-            Test which precedents the AI takes note of for any drafting job
+            Test which playbooks, resume notes, or guides match any drafting task
           </span>
         </div>
 
         <input
           className="input"
           aria-label="Precedent Similarity Radar Query"
-          placeholder="Type any scenario or incoming email summary to test similarity matching..."
+          placeholder="Type any scenario (e.g. job application, essay topic, team update) to test matching..."
           value={radarQuery}
           onChange={(e) => setRadarQuery(e.target.value)}
         />
 
         <div className="row">
           {radarMatches.length === 0 ? (
-            <span className="muted">No active precedents matched this query.</span>
+            <span className="muted">No active references matched this query.</span>
           ) : (
             radarMatches.map((m) => (
               <button
@@ -160,7 +160,7 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
       <div className="split-grid precedent-grid">
         <section className="card stack">
           <div className="row-between">
-            <div className="card-title">Precedent Library</div>
+            <div className="card-title">Reference Playbooks &amp; Precedents</div>
             <button
               type="button"
               className="btn btn-primary btn-sm"
@@ -172,7 +172,7 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
 
           <div className="upload-zone stack">
             <div style={{ fontWeight: 700, fontSize: '12.5px' }}>
-              Upload Precedent Documents
+              Upload Reference Docs, Resumes, Essays, or Templates
             </div>
             <div className="muted">
               Supports .txt, .md, .docx, .pdf, .html, .eml, .json, .csv
@@ -194,7 +194,7 @@ export const PrecedentsTab: React.FC<PrecedentsTabProps> = ({
           <input
             className="input"
             aria-label="Filter precedents"
-            placeholder="Filter precedents by title, tag, or content..."
+            placeholder="Filter playbooks, notes, or templates by title, tag, or content..."
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
           />

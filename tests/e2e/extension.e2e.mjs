@@ -233,7 +233,7 @@ async function runE2E() {
       .getByText('Personal API Keys (Stored Locally)')
       .waitFor({ timeout: 5000 });
 
-    // 5. Check Precedents & Voice tabs
+    // 5. Check Precedents & Voice tabs, upload an essay, and input instructions on the voice used
     await studioPage.getByRole('button', { name: 'Precedents' }).click();
     await studioPage
       .getByText(/99% · SaaS Annual Renewal|72% · SaaS Annual Renewal|[0-9]+% · SaaS Annual Renewal/)
@@ -246,8 +246,27 @@ async function runE2E() {
       .first()
       .waitFor({ timeout: 5000 });
 
-    // 6. Draft Studio: generate V1, iterate V2, check Diff, switch design via Header menu, Insert into textarea webmail
+    const sampleEssayPath = path.join(tmpDir, 'my-personal-essay.md');
+    fs.writeFileSync(
+      sampleEssayPath,
+      '# Designing Calm Workdays\n\nGood tools respect human attention. When we write clearly, our teammates spend less time decoding what we mean and more time building what matters.\n'
+    );
+    await studioPage
+      .getByLabel('Upload Writing Examples')
+      .setInputFiles(sampleEssayPath);
+    await studioPage
+      .getByText('Designing Calm Workdays')
+      .first()
+      .waitFor({ timeout: 5000 });
+    await studioPage
+      .getByLabel('Sample Voice Instructions')
+      .fill('Use the calm, reflective cadence and clear sentence structure from this essay.');
+
+    // 6. Draft Studio: input custom voice instructions, generate V1, iterate V2, check Diff, switch design via Header menu, Insert into textarea webmail
     await studioPage.getByRole('button', { name: 'Draft Studio' }).click();
+    await studioPage
+      .getByLabel('Voice Instructions')
+      .fill('Conversational and human — match my uploaded essay cadence.');
     await studioPage
       .getByRole('button', { name: 'Generate Fresh Draft' })
       .click();

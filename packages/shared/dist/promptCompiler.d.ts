@@ -9,6 +9,7 @@ export interface CompileDraftPromptInput {
     writingSamples: WritingSample[];
     voiceProfile: VoiceProfile;
     voiceToneOverride?: string;
+    customVoiceInstruction?: string;
     previousDraft?: string;
     refinementInstruction?: string;
     maxPrecedents?: number;

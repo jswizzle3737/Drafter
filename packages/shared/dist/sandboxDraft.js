@@ -49,6 +49,10 @@ function buildCleanSubject(subject, intent, instruction) {
     if (trimmed) {
         if (intent === 'Cold Outreach' ||
             intent === 'Status Update' ||
+            intent === 'Work Update / Slack' ||
+            intent === 'Job Application / Cover Letter' ||
+            intent === 'Essay / Long-Form' ||
+            intent === 'General / Anything' ||
             intent === 'Web Form / Comment' ||
             /^re:/i.test(trimmed)) {
             return trimmed;
@@ -79,6 +83,9 @@ export function buildSandboxDraft(params) {
     const isShorter = refLower.includes('shorter') || refLower.includes('concise') || refLower.includes('punchier');
     const isWarmer = refLower.includes('warmer');
     const isPrecedentFocus = refLower.includes('precedent');
+    const customVoiceNote = params.customVoiceInstruction?.trim()
+        ? `Voice applied: ${params.customVoiceInstruction.trim().replace(/[.!?]+$/, '')}.`
+        : '';
     const closing = formatClosing(params.preferredSignOff, author, isWarmer, params.signatureBlock, params.footerNote);
     if (params.refinement && params.previousDraft) {
         if (isShorter) {
@@ -93,6 +100,7 @@ export function buildSandboxDraft(params) {
                 `Thanks for the note on ${cleanTopic} — keeping this concise:`,
                 '',
                 bodyCore,
+                ...(customVoiceNote ? ['', customVoiceNote] : []),
                 '',
                 'Does Thursday at 2:00 PM work for a quick 15-minute alignment call?',
                 '',
@@ -111,6 +119,7 @@ export function buildSandboxDraft(params) {
                 `Really appreciate the partnership and your note regarding ${cleanTopic}.`,
                 '',
                 bodyCore,
+                ...(customVoiceNote ? ['', customVoiceNote] : []),
                 '',
                 'Would Thursday afternoon work for a quick 15-minute call to walk through options?',
                 '',
@@ -147,6 +156,7 @@ export function buildSandboxDraft(params) {
             isRenewalDiscount
                 ? `Following up on ${cleanTopic}, we cannot offer a 25% single-year discount, though we can provide a 10% loyalty credit on a 24-month upfront term${params.appliedPrecedentTitles.length ? ` (${params.appliedPrecedentTitles.join(', ')})` : ''}.`
                 : `Following up on ${cleanTopic}, we are aligned on next steps (${inlineTask})${params.appliedPrecedentTitles.length ? ` per ${params.appliedPrecedentTitles.join(', ')}` : ''}.`,
+            ...(customVoiceNote ? ['', customVoiceNote] : []),
             '',
             'Let me know if Thursday afternoon works for a brief alignment call.',
             '',
@@ -168,8 +178,42 @@ export function buildSandboxDraft(params) {
             firstPara,
             '',
             corePara,
+            ...(customVoiceNote ? ['', customVoiceNote] : []),
             '',
             'Let me know if Thursday at 2:00 PM works for a quick 15-minute alignment call.',
+            '',
+            closing,
+        ].join('\n');
+    }
+    if (params.intent === 'Essay / Long-Form') {
+        const essayTitle = cleanTopic !== 'your note' ? cleanTopic : rawTask;
+        return [
+            `Subject: ${essayTitle}`,
+            '',
+            `When looking closely at ${essayTitle.toLowerCase()}, the central takeaway comes down to ${inlineTask}. Rather than relying on abstract generalizations, the strongest perspective starts from concrete, everyday experience.`,
+            '',
+            params.appliedPrecedentTitles.length > 0
+                ? `Drawing on ${params.appliedPrecedentTitles.join(' & ')}, we can ground the argument in real examples and clear transitions—connecting how people actually work day to day with practical outcomes.`
+                : `By pairing clear analysis with grounded examples, we can show how ${inlineTask} shapes real-world decisions without unnecessary jargon.`,
+            ...(customVoiceNote ? ['', customVoiceNote] : []),
+            '',
+            `Ultimately, ${inlineTask} is about building momentum through clarity, thoughtful reflection, and consistent execution.`,
+        ].join('\n');
+    }
+    if (params.intent === 'Job Application / Cover Letter') {
+        return [
+            `Subject: ${cleanSubject}`,
+            '',
+            greeting,
+            '',
+            `I'm excited to reach out regarding ${cleanTopic}—specifically to ${inlineTask}. Having followed your team's work closely, the problems you're tackling around product execution and day-to-day velocity really resonate with my background.`,
+            '',
+            params.appliedPrecedentTitles.length > 0
+                ? `Following ${params.appliedPrecedentTitles.join(' & ')}, I've focused on shipping measurable outcomes and collaborating closely across engineering, product, and operations.`
+                : `In my recent work, I've focused on turning ambiguous projects into shipped results and clear workflows that help teams move faster.`,
+            ...(customVoiceNote ? ['', customVoiceNote] : []),
+            '',
+            'I would love to share a few relevant work samples or jump on a quick 15-minute intro call this week.',
             '',
             closing,
         ].join('\n');
@@ -180,7 +224,7 @@ export function buildSandboxDraft(params) {
     const guidanceLine = (params.appliedPrecedentGuidance ?? []).find(Boolean);
     const opener = params.intent === 'Cold Outreach'
         ? `Reaching out regarding ${cleanTopic} — ${inlineTask}.`
-        : params.intent === 'Status Update'
+        : params.intent === 'Status Update' || params.intent === 'Work Update / Slack'
             ? `Quick update on ${cleanTopic}: here is where things stand.`
             : `Thanks for the note on ${cleanTopic}.`;
     const actionBlock = isAltModel
@@ -200,6 +244,7 @@ export function buildSandboxDraft(params) {
         opener,
         '',
         actionBlock,
+        ...(customVoiceNote ? ['', customVoiceNote] : []),
         '',
         'Let me know if Thursday afternoon works for a brief check-in to finalize next steps.',
         '',
