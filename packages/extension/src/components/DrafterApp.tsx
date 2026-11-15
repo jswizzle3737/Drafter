@@ -271,21 +271,33 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
     return sessionId;
   };
 
-  const runDraftGeneration = async (refinement?: string) => {
+  const runDraftGeneration = async (
+    refinement?: string,
+    overrides?: {
+      intent?: DraftIntent;
+      instruction?: string;
+      customVoiceInstruction?: string;
+    }
+  ) => {
+    const effectiveIntent = overrides?.intent ?? intent;
+    const effectiveInstruction = overrides?.instruction ?? instruction;
+    const effectiveVoiceInstruction =
+      overrides?.customVoiceInstruction ?? customVoiceInstruction;
+
     setIsGenerating(true);
     try {
       const currentActive = versions[activeVersionIndex];
       const compiled = compileDraftPrompt({
         context: state.capturedContext,
-        intent,
-        instruction,
+        intent: effectiveIntent,
+        instruction: effectiveInstruction,
         precedents: state.precedents,
         pinnedPrecedentIds: pinnedIds,
         excludedPrecedentIds: excludedIds,
         writingSamples: state.writingSamples,
         voiceProfile: state.voiceProfile,
         voiceToneOverride,
-        customVoiceInstruction,
+        customVoiceInstruction: effectiveVoiceInstruction,
         previousDraft: refinement ? currentActive?.rawText : undefined,
         refinementInstruction: refinement,
         maxPrecedents: state.preferences.maxPrecedentsInPrompt,
@@ -299,13 +311,13 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
         compiled,
         subject: state.capturedContext.subject,
         recipient: state.capturedContext.recipient,
-        instruction,
-        intent,
+        instruction: effectiveInstruction,
+        intent: effectiveIntent,
         authorName: state.voiceProfile.displayName,
         preferredGreeting: state.voiceProfile.preferredGreeting,
         preferredSignOff: state.voiceProfile.preferredSignOff,
         signatureBlock: state.voiceProfile.signatureBlock,
-        customVoiceInstruction,
+        customVoiceInstruction: effectiveVoiceInstruction,
         previousDraft: refinement ? currentActive?.rawText : undefined,
         refinementInstruction: refinement,
         apiKeys: state.apiKeys,
@@ -322,13 +334,13 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
             compiled,
             subject: state.capturedContext.subject,
             recipient: state.capturedContext.recipient,
-            instruction,
-            intent,
+            instruction: effectiveInstruction,
+            intent: effectiveIntent,
             authorName: state.voiceProfile.displayName,
             preferredGreeting: state.voiceProfile.preferredGreeting,
             preferredSignOff: state.voiceProfile.preferredSignOff,
             signatureBlock: state.voiceProfile.signatureBlock,
-            customVoiceInstruction,
+            customVoiceInstruction: effectiveVoiceInstruction,
             apiKeys: state.apiKeys,
             companionUrl: state.companionUrl,
             companionToken: state.companionToken,
@@ -372,7 +384,7 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
         model: primary.model,
         latencyMs: primary.latencyMs,
         totalTokens: primary.totalTokens,
-        instruction: refinement ?? instruction,
+        instruction: refinement ?? effectiveInstruction,
         appliedPrecedents: compiled.appliedPrecedents.map((p) => ({
           id: p.document.id,
           title: p.document.title,
@@ -550,6 +562,20 @@ export const DrafterApp: React.FC<DrafterAppProps> = ({ mode }) => {
             }
             onAbCompareChange={setAbCompare}
             onGenerate={() => runDraftGeneration()}
+            onDraftSuggestion={(suggestion) => {
+              setIntent(suggestion.intent);
+              setInstruction(suggestion.instruction);
+              const voiceToUse =
+                customVoiceInstruction.trim() || suggestion.voiceHint || '';
+              if (!customVoiceInstruction.trim() && suggestion.voiceHint) {
+                setCustomVoiceInstruction(suggestion.voiceHint);
+              }
+              void runDraftGeneration(undefined, {
+                intent: suggestion.intent,
+                instruction: suggestion.instruction,
+                customVoiceInstruction: voiceToUse,
+              });
+            }}
             onIterate={(refText) => runDraftGeneration(refText)}
             onSelectVersion={setActiveVersionIndex}
             onInsertIntoTab={handleInsertIntoTab}

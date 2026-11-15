@@ -6,4 +6,5 @@ export * from './voiceEngine.js';
 export * from './promptCompiler.js';
 export * from './sandboxDraft.js';
 export * from './catalog.js';
+export * from './pageAnalyzer.js';
 //# sourceMappingURL=index.js.map

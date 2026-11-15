@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
+  analyzePageForDraftSuggestions,
   compileDraftPrompt,
   computeLineDiff,
   getModelsForProvider,
@@ -10,6 +11,7 @@ import {
   TONE_PRESETS,
   VOICE_INSTRUCTION_PRESETS,
   type DraftIntent,
+  type DraftSuggestion,
   type DraftVersion,
   type PageContext,
   type PrecedentDocument,
@@ -50,6 +52,7 @@ interface DraftStudioTabProps {
   onOllamaUrlChange: (url: string) => void;
   onAbCompareChange: (val: boolean) => void;
   onGenerate: () => void;
+  onDraftSuggestion: (suggestion: DraftSuggestion) => void;
   onIterate: (refinement: string) => void;
   onSelectVersion: (idx: number) => void;
   onInsertIntoTab: (subject: string, body: string) => void;
@@ -89,6 +92,7 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
   onOllamaUrlChange,
   onAbCompareChange,
   onGenerate,
+  onDraftSuggestion,
   onIterate,
   onSelectVersion,
   onInsertIntoTab,
@@ -248,12 +252,17 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
     onIterate(clean);
   };
 
+  const pageAnalysis = useMemo(
+    () => analyzePageForDraftSuggestions(state.capturedContext),
+    [state.capturedContext]
+  );
+
   return (
     <div className="split-grid">
       {/* Left Column: Inputs & Controls */}
       <div className="stack">
         {/* Context & Briefing */}
-        <section className="card">
+        <section className="card stack">
           <div className="card-header">
             <div className="card-title">
               <span>Context &amp; Briefing</span>
@@ -275,24 +284,24 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
             </div>
           </div>
 
-            <div className="subcard stack">
-              <div className="row-between">
-                <span style={{ fontWeight: 700, fontSize: '13px' }}>
-                  {state.capturedContext.kind === 'email' ? 'Email: ' : 'Page: '}
-                  {state.capturedContext.subject ||
-                    state.capturedContext.title ||
-                    'Manual Context'}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => setContextCollapsed((c) => !c)}
-                >
-                  {contextCollapsed ? 'Expand' : 'Collapse'}
-                </button>
-              </div>
+          <div className="subcard stack">
+            <div className="row-between">
+              <span style={{ fontWeight: 700, fontSize: '13px' }}>
+                {state.capturedContext.kind === 'email' ? 'Email: ' : 'Page: '}
+                {state.capturedContext.subject ||
+                  state.capturedContext.title ||
+                  'Manual Context'}
+              </span>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setContextCollapsed((c) => !c)}
+              >
+                {contextCollapsed ? 'Expand' : 'Collapse'}
+              </button>
+            </div>
 
-              {!contextCollapsed && (
+            {!contextCollapsed && (
               <>
                 <div className="grid-2">
                   <input
@@ -357,6 +366,62 @@ export const DraftStudioTab: React.FC<DraftStudioTabProps> = ({
                   </button>
                 </div>
               </>
+            )}
+          </div>
+
+          {/* Page-Aware Document Offers */}
+          <div className="subcard stack">
+            <div className="row-between">
+              <div className="row" style={{ gap: '8px' }}>
+                <span style={{ fontWeight: 700, fontSize: '12.5px' }}>
+                  Suggested Documents for This Page
+                </span>
+                <span className="badge badge-accent">
+                  {pageAnalysis.pageBadge}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={onCaptureTab}
+              >
+                Re-read Page
+              </button>
+            </div>
+            <div className="muted" style={{ fontSize: '12px' }}>
+              {pageAnalysis.summaryLine}
+            </div>
+            {pageAnalysis.suggestions.length > 0 && (
+              <div className="stack" style={{ gap: '6px' }}>
+                {pageAnalysis.suggestions.map((sug) => (
+                  <div
+                    key={sug.id}
+                    className="list-item row-between"
+                    style={{ cursor: 'pointer', gap: '10px' }}
+                    onClick={() => !isGenerating && onDraftSuggestion(sug)}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '12.5px' }}>
+                        {sug.label}
+                      </div>
+                      <div className="muted" style={{ fontSize: '11.5px' }}>
+                        {sug.description}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      disabled={isGenerating}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDraftSuggestion(sug);
+                      }}
+                    >
+                      Draft This →
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </section>

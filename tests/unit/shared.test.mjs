@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { zipSync, strToU8 } from 'fflate';
 import {
+  analyzePageForDraftSuggestions,
   analyzeWritingSamples,
   buildPrecedentIndex,
   buildSandboxDraft,
@@ -286,5 +287,34 @@ test('DESIGN_THEMES defines all 15 PromptOptimizer interface designs and normali
   assert.equal(normalizeThemeId('terminal'), 'terminal');
   assert.equal(normalizeThemeId('unknown-theme'), 'dark');
   assert.equal(getDesignTheme('rose').name, 'Rose');
+});
+
+test('analyzePageForDraftSuggestions detects job postings, emails, and articles and offers tailored documents', () => {
+  const jobAnalysis = analyzePageForDraftSuggestions({
+    kind: 'webpage',
+    title: 'Senior Product Engineer at Acme',
+    subject: 'Senior Product Engineer at Acme',
+    recipient: '',
+    threadText: 'Responsibilities: Build customer-facing features. Qualifications: 4+ years of experience. Apply now.',
+    url: 'https://boards.greenhouse.io/acme/jobs/123',
+    hostname: 'boards.greenhouse.io',
+    capturedAt: '2026-11-14T00:00:00.000Z',
+  });
+  assert.equal(jobAnalysis.pageKind, 'job');
+  assert.equal(jobAnalysis.pageBadge, 'Job Posting Detected');
+  assert.ok(jobAnalysis.suggestions.some((s) => s.intent === 'Job Application / Cover Letter'));
+
+  const articleAnalysis = analyzePageForDraftSuggestions({
+    kind: 'webpage',
+    title: 'Why Small Teams Ship Faster',
+    subject: 'Why Small Teams Ship Faster',
+    recipient: '',
+    threadText: 'Long-form essay content '.repeat(60),
+    url: 'https://example.substack.com/p/small-teams',
+    hostname: 'example.substack.com',
+    capturedAt: '2026-11-14T00:00:00.000Z',
+  });
+  assert.equal(articleAnalysis.pageKind, 'article');
+  assert.ok(articleAnalysis.suggestions.some((s) => s.intent === 'Essay / Long-Form'));
 });
 

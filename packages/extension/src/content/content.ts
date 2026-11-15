@@ -92,19 +92,25 @@ function extractThreadText(): string {
     '[data-message-body]',
     '.email-body',
     '.message-body',
+    '.job-description',
+    '#job-details',
+    '[data-testid*="job" i]',
     'article',
+    'main',
+    '[role="main"]',
     'blockquote',
   ];
   for (const sel of selectors) {
     for (const node of Array.from(document.querySelectorAll(sel))) {
       const txt = (node as HTMLElement).innerText?.trim();
-      if (txt && txt.length > 12 && !blocks.includes(txt)) {
+      if (txt && txt.length > 20 && !blocks.includes(txt)) {
         blocks.push(txt);
       }
     }
+    if (blocks.join('\n\n').length >= 6000) break;
   }
   if (blocks.length > 0) {
-    return blocks.join('\n\n').slice(0, 4000);
+    return blocks.join('\n\n').slice(0, 6000);
   }
 
   // Fallback: collect visible paragraph/div text excluding input fields
@@ -120,7 +126,7 @@ function extractThreadText(): string {
   const filtered = composeVal
     ? lines.filter((l) => !composeVal.includes(l))
     : lines;
-  return filtered.slice(0, 40).join('\n').slice(0, 4000);
+  return filtered.slice(0, 80).join('\n').slice(0, 6000);
 }
 
 function captureContext(selectionOverride = ''): PageContext {
@@ -131,7 +137,10 @@ function captureContext(selectionOverride = ''): PageContext {
     Boolean(recipient) ||
     /mail|inbox|compose/i.test(location.href + ' ' + document.title);
 
-  const threadText = selectionOverride.trim() || extractThreadText();
+  const windowSelection =
+    typeof window !== 'undefined' ? window.getSelection()?.toString() ?? '' : '';
+  const threadText =
+    selectionOverride.trim() || windowSelection.trim() || extractThreadText();
 
   return {
     kind: isEmailPage ? 'email' : 'webpage',
